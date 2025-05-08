@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import SectionTitle from "@/components/common/SectionTitle"
@@ -34,37 +35,43 @@ export default function LunchSection() {
 
       {/* 센터 A & B 카드 */}
       <div className="flex flex-col sm:flex-row gap-4">
-        {/* 센터 A */}
-        <Card className="flex-1 shadow-sm border border-gray-200">
-          <CardContent className="p-4 space-y-2">
-            <h3 className="text-base font-medium text-gray-800">식단 A</h3>
-            <ul className="text-sm text-gray-600 list-disc list-inside space-y-1">
-              {lunchData.centerA.map((item, idx) => (
-                <li key={idx}>{item}</li>
-              ))}
-            </ul>
-            <div className="flex flex-wrap gap-1 pt-2">
-              <Badge variant="outline">국물 있음</Badge>
-              <Badge variant="secondary">매울 수 있음</Badge>
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* 센터 B */}
-        <Card className="flex-1 shadow-sm border border-gray-200">
-          <CardContent className="p-4 space-y-2">
-            <h3 className="text-base font-medium text-gray-800">식단 B</h3>
-            <ul className="text-sm text-gray-600 list-disc list-inside space-y-1">
-              {lunchData.centerB.map((item, idx) => (
-                <li key={idx}>{item}</li>
-              ))}
-            </ul>
-            <div className="flex flex-wrap gap-1 pt-2">
-              <Badge variant="outline">국물 없음</Badge>
-              <Badge variant="secondary">맵지 않음</Badge>
-            </div>
-          </CardContent>
-        </Card>
+        {/* ✅ 카드 A를 /review/a로 라우팅 */}
+        <Link href="/review/a" className="flex-1">
+          <Card className="h-full hover:shadow-md transition-shadow border border-gray-200 cursor-pointer">
+            <CardContent className="p-4 space-y-2">
+              <h3 className="text-base font-medium text-gray-800">식단 A</h3>
+              <ul className="text-sm text-gray-600 list-disc list-inside space-y-1">
+                {lunchData.centerA.map((item, idx) => (
+                  <li key={idx}>{item}</li>
+                ))}
+              </ul>
+              <div className="flex flex-wrap gap-1 pt-2">
+                <Badge variant="outline">국물 있음</Badge>
+                <Badge variant="secondary">매울 수 있음</Badge>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        {/* ✅ 카드 B를 /review/b로 라우팅 */}
+        <Link href="/review/b" className="flex-1">
+          <Card className="h-full hover:shadow-md transition-shadow border border-gray-200 cursor-pointer">
+            <CardContent className="p-4 space-y-2">
+              <h3 className="text-base font-medium text-gray-800">식단 B</h3>
+              <ul className="text-sm text-gray-600 list-disc list-inside space-y-1">
+                {lunchData.centerB.map((item, idx) => (
+                  <li key={idx}>{item}</li>
+                ))}
+              </ul>
+              <div className="flex flex-wrap gap-1 pt-2">
+                <Badge variant="outline">국물 없음</Badge>
+                <Badge variant="secondary">맵지 않음</Badge>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
       </div>
     </section>
   )
