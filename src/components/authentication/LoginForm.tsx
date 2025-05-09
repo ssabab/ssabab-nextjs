@@ -1,3 +1,7 @@
+'use client'
+
+import { useState } from "react"
+import axios from "axios"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -14,37 +18,68 @@ export function LoginForm({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<"div">) {
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  })
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target
+    setFormData(prev => ({...prev, [id]: value}))
+  }
+
+  const submitLoginForm = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      const response = await axios.post("http://localhost:8080/account/login", formData)
+      alert("로그인 성공!")
+      window.location.href = "/ssabab"
+    } catch (error: any) {
+      console.error("로그인 실패", error)
+      const errorMessage = error.response?.data?.message || "서버 오류가 발생했습니다."
+      alert("로그인 실패: " + errorMessage)
+    }
+  }
+
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Login</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-2xl text-center">로그인</CardTitle>
+          {/* <CardDescription>
             Enter your email below to login to your account
-          </CardDescription>
+          </CardDescription> */}
         </CardHeader>
         <CardContent>
-          <form>
+          <form onSubmit={submitLoginForm}>
             <div className="flex flex-col gap-6">
               <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">이메일</Label>
                 <Input
                   id="email"
                   type="email"
                   placeholder="m@example.com"
+                  value={formData.email}
+                  onChange={handleInputChange}
                   required
                 />
               </div>
               <div className="grid gap-2">
                 <div className="flex items-center">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password">비밀번호</Label>
                 </div>
-                <Input id="password" type="password" required />
+                <Input 
+                  id="password" 
+                  type="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  required 
+                />
               </div>
               <Button type="submit" className="w-full">
-                Login
+                로그인
               </Button>
-              <div className="grid gap-4 sm:grid-cols-2">
+              {/* <div className="grid gap-4 sm:grid-cols-2">
                 <Button variant="outline" className="w-full">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                   <path
@@ -63,12 +98,12 @@ export function LoginForm({
                   </svg>
                   Login with Google
                 </Button>
-              </div>
+              </div> */}
             </div>
             <div className="mt-4 text-center text-sm">
-              Don&apos;t have an account?{" "}
+              계정이 없으신가요?{" "}
               <a href="signup" className="underline underline-offset-4">
-                Sign up
+                가입하기
               </a>
             </div>
           </form>
