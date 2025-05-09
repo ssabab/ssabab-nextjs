@@ -70,7 +70,7 @@ export default function LineChartComponent() {
             <Line
               dataKey="desktop"
               type="natural"
-              stroke="#000000"
+              stroke="var(--color-desktop)"
               strokeWidth={2}
               dot={{
                 fill: "var(--color-desktop)",

@@ -1,3 +1,7 @@
+'use client'
+
+import { useState } from "react"
+import axios from "axios"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -14,37 +18,85 @@ export function SignupForm({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<"div">) {
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    username: "",
+  })
+
+  // e는 <input> 요소의 onChange 이벤트 객체
+  // React.ChangeEvent<HTMLInputElement>는 타입스크립트에서 타입 명시임
+  // e.target은 <input> 그 자체를 의미함
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // id: e.target.id, value: e.target.value
+    const { id, value } = e.target
+    // prev는 기존 상태값(formData)를 의미함
+    // ...prev -> 기존 데이터를 복사, [id]: value -> 해당 input의 id에 해당하는 value를 갱신
+    setFormData(prev => ({ ...prev, [id]: value }))
+  }
+
+  const submitSignupForm = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      const response = await axios.post("http://localhost:8080/account/signup", formData)
+      alert("회원가입 성공!")
+      window.location.href = "/login"
+    } catch (error: any) {
+      console.error("회원가입 실패", error)
+      const errorMessage = error.response?.data?.message || "서버 오류가 발생했습니다."
+      alert("회원가입 실패: " + errorMessage)
+    }
+  }
+
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Signup</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-2xl text-center">회원가입</CardTitle>
+          {/* <CardDescription>
             Create a new account
-          </CardDescription>
+          </CardDescription> */}
         </CardHeader>
         <CardContent>
-          <form>
+          <form onSubmit={submitSignupForm}>
             <div className="flex flex-col gap-6">
               <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">이메일</Label>
                 <Input
                   id="email"
                   type="email"
                   placeholder="m@example.com"
+                  value={formData.email}
+                  onChange={handleInputChange}
                   required
                 />
               </div>
               <div className="grid gap-2">
                 <div className="flex items-center">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password">비밀번호</Label>
                 </div>
-                <Input id="password" type="password" required />
+                <Input 
+                  id="password" 
+                  type="password" 
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  required />
+              </div>
+              <div className="grid gap-2">
+                <div className="flex items-center">
+                  <Label htmlFor="username">이름 또는 닉네임</Label>
+                </div>
+                <Input 
+                  id="username" 
+                  type="text" 
+                  value={formData.username}
+                  onChange={handleInputChange}
+                  required />
               </div>
               <Button type="submit" className="w-full">
-                Create an account
+                가입하기
               </Button>
-              <div className="grid gap-4 sm:grid-cols-2">
+              {/* <div className="grid gap-4 sm:grid-cols-2">
                 <Button variant="outline" className="w-full">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                   <path
@@ -63,12 +115,12 @@ export function SignupForm({
                   </svg>
                     Signup with Google
                 </Button>
-              </div>
+              </div> */}
             </div>
             <div className="mt-4 text-center text-sm">
-              Already have an account?{" "}
+              계정이 있으신가요?{" "}
               <a href="login" className="underline underline-offset-4">
-                Log in
+                로그인
               </a>
             </div>
           </form>
