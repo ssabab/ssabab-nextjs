@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import axios from "axios"
-import { Calendar } from "@/components/ui/calendar"
+import SharedCalendar from "@/components/common/Calendar"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import SectionTitle from "@/components/common/SectionTitle"
@@ -25,23 +25,27 @@ export default function LunchSection() {
   const [menuData, setMenuData] = useState<Menu[]>([])
   const [isCalendarOpen, setIsCalendarOpen] = useState(false)
 
-  // API용 날짜: yyyy-mm-dd
-  const formatDateForAPI = (date: Date) => date.toISOString().slice(0, 10)
+  const formatDateForAPI = (date: Date) => {
+    const tzOffset = date.getTimezoneOffset() * 60000 // 분 → 밀리초
+    const localDate = new Date(date.getTime() - tzOffset)
+    return localDate.toISOString().slice(0, 10)
+  }
 
-  // 화면 출력용 날짜: yyyy.MM.dd EEE (예: 2025.05.12 Mon)
+  // yyyy.MM.dd EEE (예: 2025.05.07 Wed)
   const formatDateForDisplay = (date: Date) => {
     const year = date.getFullYear()
     const month = String(date.getMonth() + 1).padStart(2, "0")
     const day = String(date.getDate()).padStart(2, "0")
-    const weekday = date.toLocaleDateString("en-US", { weekday: "short" }) // "Mon", "Tue"
+    const weekday = date.toLocaleDateString("en-US", { weekday: "short" })
     return `${year}.${month}.${day} ${weekday}`
   }
 
-  // 메뉴 API 요청
+  // API 호출
   useEffect(() => {
     if (!selectedDate) return
 
     const dateStr = formatDateForAPI(selectedDate)
+
     axios
       .get<Menu[]>(`http://localhost:8080/menu/${dateStr}`)
       .then((res) => setMenuData(res.data))
@@ -55,7 +59,7 @@ export default function LunchSection() {
     <section className="space-y-6">
       <SectionTitle title="점심 식단 보기" />
 
-      {/* ✅ 날짜 토글 버튼 */}
+      {/* 날짜 선택 버튼 + 토글 */}
       <div>
         <button
           onClick={() => setIsCalendarOpen((prev) => !prev)}
@@ -66,8 +70,7 @@ export default function LunchSection() {
 
         {isCalendarOpen && (
           <div className="mt-2 w-fit">
-            <Calendar
-              mode="single"
+            <SharedCalendar
               selected={selectedDate}
               onSelect={(date) => {
                 if (date) {
@@ -75,13 +78,12 @@ export default function LunchSection() {
                   setIsCalendarOpen(false)
                 }
               }}
-              className="rounded-md border"
             />
           </div>
         )}
       </div>
 
-      {/* ✅ 메뉴 카드 A/B */}
+      {/* 메뉴 카드 A/B */}
       <div className="flex flex-col sm:flex-row gap-4">
         {/* A */}
         <Card className="flex-1 border hover:shadow-md">
