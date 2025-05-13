@@ -54,8 +54,8 @@ export default function LunchSection() {
       .catch((err) => console.error("메뉴 로딩 실패:", err))
   }, [selectedDate])
 
-  const centerA = menuData.find((menu) => menu.menuId === 1)?.foods || []
-  const centerB = menuData.find((menu) => menu.menuId === 2)?.foods || []
+  const centerA = menuData.find((menu) => menu.menuId%2 === 1)?.foods || []
+  const centerB = menuData.find((menu) => menu.menuId%2 === 0)?.foods || []
 
   return (
     <section className="space-y-6">
