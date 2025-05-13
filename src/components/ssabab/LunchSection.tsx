@@ -6,6 +6,7 @@ import SharedCalendar from "@/components/common/Calendar"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import SectionTitle from "@/components/common/SectionTitle"
+import { useRouter, useSearchParams } from 'next/navigation'
 
 interface FoodItem {
   foodId: number
@@ -24,6 +25,7 @@ export default function LunchSection() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
   const [menuData, setMenuData] = useState<Menu[]>([])
   const [isCalendarOpen, setIsCalendarOpen] = useState(false)
+  const router = useRouter()
 
   const formatDateForAPI = (date: Date) => {
     const tzOffset = date.getTimezoneOffset() * 60000 // 분 → 밀리초
@@ -86,36 +88,46 @@ export default function LunchSection() {
       {/* 메뉴 카드 A/B */}
       <div className="flex flex-col sm:flex-row gap-4">
         {/* A */}
-        <Card className="flex-1 border hover:shadow-md">
-          <CardContent className="p-4 space-y-2">
-            <h3 className="text-base font-medium text-gray-800">식단 A</h3>
-            <ul className="text-sm text-gray-600 list-disc list-inside space-y-1">
-              {centerA.map((item) => (
-                <li key={item.foodId}>{item.foodName}</li>
-              ))}
-            </ul>
-            <div className="flex flex-wrap gap-1 pt-2">
-              <Badge variant="outline">국물 있음</Badge>
-              <Badge variant="secondary">매울 수 있음</Badge>
-            </div>
-          </CardContent>
-        </Card>
+        <div onClick={() => router.push(`/review/1?date=${formatDateForAPI(selectedDate!)}`)}>
+          <Card className="flex-1 border hover:shadow-md">
+            <CardContent className="p-4 space-y-2">
+              <h3 className="text-base font-medium text-gray-800">식단 A</h3>
+              <ul className="text-sm text-gray-600 list-disc list-inside space-y-1">
+                {centerA.map((item) => (
+                  <li key={item.foodId}>
+                    {item.foodName}
+                  </li>
+                ))}
+              </ul>
+
+              <div className="flex flex-wrap gap-1 pt-2">
+                <Badge variant="outline">국물 있음</Badge>
+                <Badge variant="secondary">매울 수 있음</Badge>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* B */}
-        <Card className="flex-1 border hover:shadow-md">
-          <CardContent className="p-4 space-y-2">
-            <h3 className="text-base font-medium text-gray-800">식단 B</h3>
-            <ul className="text-sm text-gray-600 list-disc list-inside space-y-1">
-              {centerB.map((item) => (
-                <li key={item.foodId}>{item.foodName}</li>
-              ))}
-            </ul>
-            <div className="flex flex-wrap gap-1 pt-2">
-              <Badge variant="outline">국물 없음</Badge>
-              <Badge variant="secondary">맵지 않음</Badge>
-            </div>
-          </CardContent>
-        </Card>
+        <div onClick={() => router.push(`/review/2?date=${formatDateForAPI(selectedDate!)}`)}>
+          <Card className="flex-1 border hover:shadow-md">
+            <CardContent className="p-4 space-y-2">
+              <h3 className="text-base font-medium text-gray-800">식단 B</h3>
+              <ul className="text-sm text-gray-600 list-disc list-inside space-y-1">
+                {centerA.map((item) => (
+                  <li key={item.foodId}>
+                    {item.foodName}
+                  </li>
+                ))}
+              </ul>
+              <div className="flex flex-wrap gap-1 pt-2">
+                <Badge variant="outline">국물 없음</Badge>
+                <Badge variant="secondary">맵지 않음</Badge>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
       </div>
     </section>
   )
