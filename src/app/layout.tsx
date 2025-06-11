@@ -1,4 +1,6 @@
 import type { Metadata } from "next"
+import Navbar from '@/components/common/Navbar'
+import BottomBar from '@/components/common/BottomTab'
 import "./globals.css"
 
 export const metadata: Metadata = {
@@ -8,8 +10,12 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ko">
-      <body className="bg-white text-gray-900">
-        {children}
+      <body className="flex flex-col min-h-screen">
+        <Navbar />
+        <main className="flex-grow pt-16 pb-12">
+          {children}
+        </main>
+        <BottomBar />
       </body>
     </html>
   )

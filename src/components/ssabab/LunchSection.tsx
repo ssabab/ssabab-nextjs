@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react"
 import axios from "axios"
-import SharedCalendar from "@/components/common/Calendar"
+
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import SectionTitle from "@/components/common/SectionTitle"
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 
 interface FoodItem {
   foodId: number
@@ -22,32 +22,39 @@ interface Menu {
 }
 
 export default function LunchSection() {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [menuData, setMenuData] = useState<Menu[]>([])
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false)
+  const [weekOffset, setWeekOffset] = useState<number>(0)  // 주차 오프셋
   const router = useRouter()
 
   const formatDateForAPI = (date: Date) => {
-    const tzOffset = date.getTimezoneOffset() * 60000 // 분 → 밀리초
+    const tzOffset = date.getTimezoneOffset() * 60000
     const localDate = new Date(date.getTime() - tzOffset)
     return localDate.toISOString().slice(0, 10)
   }
 
-  // yyyy.MM.dd EEE (예: 2025.05.07 Wed)
-  const formatDateForDisplay = (date: Date) => {
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, "0")
-    const day = String(date.getDate()).padStart(2, "0")
-    const weekday = date.toLocaleDateString("en-US", { weekday: "short" })
-    return `${year}.${month}.${day} ${weekday}`
+  // 주어진 주차의 월~금 날짜 배열 반환
+  const getWeekDates = (offset: number) => {
+    const today = new Date()
+    const day = today.getDay() // 일=0, 월=1...
+    const diffToMonday = (day + 6) % 7
+    const monday = new Date(today)
+    monday.setHours(0, 0, 0, 0)
+    monday.setDate(today.getDate() - diffToMonday + offset * 7)
+    const dates: Date[] = []
+    for (let i = 0; i < 5; i++) {
+      const d = new Date(monday)
+      d.setDate(monday.getDate() + i)
+      dates.push(d)
+    }
+    return dates
   }
+
+  const weekDates = getWeekDates(weekOffset)
 
   // API 호출
   useEffect(() => {
-    if (!selectedDate) return
-
     const dateStr = formatDateForAPI(selectedDate)
-
     axios
       .get<Menu[]>(`http://localhost:8080/menu/${dateStr}`)
       .then((res) => setMenuData(res.data))
@@ -60,29 +67,40 @@ export default function LunchSection() {
   return (
     <section className="space-y-6">
       <SectionTitle title="점심 식단 보기" />
-
-      {/* 날짜 선택 버튼 + 토글 */}
-      <div>
-        <button
-          onClick={() => setIsCalendarOpen((prev) => !prev)}
-          className="border rounded px-3 py-1 text-sm hover:bg-gray-100"
-        >
-          {selectedDate ? formatDateForDisplay(selectedDate) : "날짜 선택"}
-        </button>
-
-        {isCalendarOpen && (
-          <div className="mt-2 w-fit">
-            <SharedCalendar
-              selected={selectedDate}
-              onSelect={(date) => {
-                if (date) {
-                  setSelectedDate(date)
-                  setIsCalendarOpen(false)
-                }
-              }}
-            />
-          </div>
+      <div className="flex space-x-2 mb-4">
+        {weekOffset === 0 ? (
+          <button
+            onClick={() => setWeekOffset(-1)}
+            className="px-3 py-1 border rounded bg-white text-gray-700"
+          >
+            {'<<'}
+          </button>
+        ) : (
+          <button
+            onClick={() => setWeekOffset(0)}
+            className="px-3 py-1 border rounded bg-white text-gray-700"
+          >
+            {'>>'}
+          </button>
         )}
+
+        {weekDates.map((date) => {
+          const label = date.toLocaleDateString('ko-KR', { weekday: 'short' }).charAt(0)
+          const isSelected = selectedDate.toDateString() === date.toDateString()
+          return (
+            <button
+              key={date.toISOString()}
+              onClick={() => setSelectedDate(date)}
+              className={
+                `px-3 py-1 border rounded ${
+                  isSelected ? 'bg-blue-500 text-white' : 'bg-white text-gray-700'
+                }`
+              }
+            >
+              {label}
+            </button>
+          )
+        })}
       </div>
 
       {/* 메뉴 카드 A/B */}
@@ -94,9 +112,7 @@ export default function LunchSection() {
               <h3 className="text-base font-medium text-gray-800">식단 A</h3>
               <ul className="text-sm text-gray-600 list-disc list-inside space-y-1">
                 {centerA.map((item) => (
-                  <li key={item.foodId}>
-                    {item.foodName}
-                  </li>
+                  <li key={item.foodId}>{item.foodName}</li>
                 ))}
               </ul>
 

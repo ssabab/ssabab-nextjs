@@ -1,7 +1,7 @@
 import AreaChartComponent from "@/components/analysis/AreaChart"
 import BarChartComponent from "@/components/analysis/BarChart"
 import LineChartComponent from "@/components/analysis/LineChart"
-import BottomTab from "@/components/BottomTab"
+import BottomTab from "@/components/common/BottomTab"
 
 export default function AnalysisPage() {
   return (
@@ -10,7 +10,6 @@ export default function AnalysisPage() {
       <BarChartComponent />
       <LineChartComponent />
       <div className="fixed bottom-0 left-0 w-full bg-white border-t z-50">
-        <BottomTab />
       </div>
     </main>
   )
