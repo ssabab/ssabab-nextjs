@@ -1,19 +1,12 @@
-import { Card, CardContent } from "@/components/ui/card"
-import SectionTitle from "@/components/common/SectionTitle"
-
-const insightText =
-  "○○님의 이전 선택과 비교했을 때, 식단 A안을 60% 확률로 더 좋아하실 것 같아요. 최근 5회 중 3회는 국물 있는 메뉴를 선택했어요."
+'use client'
 
 export default function InsightSection() {
   return (
-    <section className="space-y-3">
-      <SectionTitle title="오늘의 식사 인사이트" />
-
-      <Card className="shadow-sm border border-gray-200">
-        <CardContent className="p-4 text-sm text-gray-700 leading-relaxed">
-          {insightText}
-        </CardContent>
-      </Card>
+    <section className="bg-white shadow rounded-lg p-6 space-y-4">
+      <h3 className="text-lg font-semibold">오늘의 UI 선택 인사이트</h3>
+      <div className="h-40 bg-gray-100 flex items-center justify-center">
+        분석 내용
+      </div>
     </section>
   )
 }
