@@ -1,7 +1,6 @@
 import AreaChartComponent from "@/components/analysis/AreaChart"
 import BarChartComponent from "@/components/analysis/BarChart"
 import LineChartComponent from "@/components/analysis/LineChart"
-import BottomTab from "@/components/common/BottomTab"
 
 export default function AnalysisPage() {
   return (

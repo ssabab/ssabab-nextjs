@@ -26,3 +26,5 @@ export default function FriendsSection() {
     </section>
   )
 }
+
+// TODO : 동료별 선호도와 평가 데이터 어떻게 띄울 것인지?

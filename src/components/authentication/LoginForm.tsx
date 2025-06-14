@@ -1,13 +1,12 @@
 'use client'
 
 import { useState } from "react"
-import axios from "axios"
+import { login } from '@/lib/api'
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
@@ -31,24 +30,22 @@ export function LoginForm({
   const submitLoginForm = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const response = await axios.post("http://localhost:8080/account/login", formData)
-      alert("로그인 성공!")
-      window.location.href = "/ssabab"
-    } catch (error: any) {
-      console.error("로그인 실패", error)
-      const errorMessage = error.response?.data?.message || "서버 오류가 발생했습니다."
-      alert("로그인 실패: " + errorMessage)
+      await login(formData.email, formData.password)
+      alert('로그인 성공!')
+      window.location.href = '/ssabab'
+    } catch (error) {
+      console.error('로그인 실패', error)
+      const errorMessage =
+        (error as any).response?.data?.message || '서버 오류가 발생했습니다.'
+      alert('로그인 실패: ' + errorMessage)
     }
   }
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card>
+      <Card className="border">
         <CardHeader>
           <CardTitle className="text-2xl text-center">로그인</CardTitle>
-          {/* <CardDescription>
-            Enter your email below to login to your account
-          </CardDescription> */}
         </CardHeader>
         <CardContent>
           <form onSubmit={submitLoginForm}>
