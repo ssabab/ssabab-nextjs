@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import axios from "axios"
 import WeekBar from "@/components/ssabab/WeekBar"
 import { Card, CardContent } from "@/components/ui/card"
@@ -17,7 +17,13 @@ interface FoodItem {
 
 interface Menu {
   menuId: number
+  date: string; // date 속성 추가
   foods: FoodItem[]
+}
+
+// API 응답 전체 구조를 위한 인터페이스 추가
+interface ApiResponse {
+  menus: Menu[];
 }
 
 export default function LunchSection() {
@@ -31,17 +37,30 @@ export default function LunchSection() {
     return localDate.toISOString().slice(0, 10)
   }
 
+  const handleDateChange = useCallback((dateString: string) => {
+    setSelectedDate(new Date(dateString))
+  }, [])
+
   // 메뉴 데이터 불러오기
   useEffect(() => {
     const load = async () => {
       try {
         const dateStr = formatDateForAPI(selectedDate)
-        const res = await axios.get<Menu[]>(
-          `http://localhost:8080/menu/${dateStr}`
+        // API 응답 전체 구조를 ApiResponse 타입으로 받습니다.
+        const res = await axios.get<ApiResponse>(
+          `http://localhost:8080/api/menu?date=${dateStr}`
         )
-        setMenuData(res.data)
+        // 실제 메뉴 데이터는 res.data.menus 안에 있으므로 이를 설정합니다.
+        // 그리고 res.data.menus가 배열인지 한 번 더 확인하여 안정성을 높입니다.
+        if (res.data && Array.isArray(res.data.menus)) {
+          setMenuData(res.data.menus)
+        } else {
+          console.warn("API 응답에 'menus' 배열이 없거나 유효하지 않습니다:", res.data);
+          setMenuData([]); // 데이터가 없으면 빈 배열로 초기화
+        }
       } catch (err) {
         console.error("메뉴 로딩 실패:", err)
+        setMenuData([]); // 에러 발생 시 빈 배열로 초기화
       }
     }
     load()
@@ -56,10 +75,8 @@ export default function LunchSection() {
     <section className="space-y-6 bg-white shadow rounded-lg p-6">
       <h2 className="text-xl font-bold">오늘의 점심 식단 보기</h2>
 
-      {/* WeekBar 컴포넌트로 교체 */}
-      <WeekBar onDateChange={(dateString) => setSelectedDate(new Date(dateString))} />
+      <WeekBar onDateChange={handleDateChange} />
 
-      {/* 메뉴 카드 A/B */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* 식단 A */}
         <div

@@ -5,7 +5,13 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { getProfile } from '@/lib/api'
+// LoginForm 컴포넌트 임포트 (이제 SocialLoginModal 역할을 함)
 import { LoginForm } from '@/components/authentication/LoginForm'
+
+// react-icons에서 필요한 아이콘 임포트
+import { MdPerson, MdLogin } from 'react-icons/md'
+import { BiBowlRice } from "react-icons/bi";
+import { TbPresentationAnalytics } from "react-icons/tb"; // TbPresentationAnalytics 아이콘 임포트
 
 export default function Navbar() {
   const pathname = usePathname()
@@ -21,13 +27,13 @@ export default function Navbar() {
       .catch(() => setIsLoggedIn(false))
   }, [])
 
-  // 2) 마이페이지 클릭 핸들러
+  // 2) 마이페이지/로그인 클릭 핸들러
   const handleMyPageClick = (e: React.MouseEvent) => {
     e.preventDefault()
     if (isLoggedIn) {
       router.push('/mypage')
     } else {
-      setShowLogin(true)
+      setShowLogin(true) // 로그인 모달 표시
     }
   }
 
@@ -48,44 +54,56 @@ export default function Navbar() {
 
           {/* Tabs */}
           <div className="flex items-center space-x-6">
-            {/* 분석 탭 (링크) */}
+            {/* 싸밥 탭 (링크) - BiBowlRice 아이콘 사용 */}
+            <Link
+              href="/"
+              aria-label="싸밥"
+              className={`
+                flex flex-col items-center justify-center
+                pb-1 border-b-2 transition-colors
+                ${pathname === '/'
+                  ? 'border-black'
+                  : 'border-transparent hover:border-gray-600'}
+              `}
+            >
+              <BiBowlRice size={24} /> {/* BiBowlRice 아이콘 사용 */}
+              <span className="mt-1 text-sm">싸밥</span>
+            </Link>
+
+            {/* 분석 탭 (링크) - TbPresentationAnalytics 아이콘 사용 */}
             <Link
               href="/analysis"
               aria-label="분석"
               className={`
+                flex flex-col items-center justify-center
                 pb-1 border-b-2 transition-colors
                 ${pathname === '/analysis'
                   ? 'border-black'
                   : 'border-transparent hover:border-gray-600'}
               `}
             >
-              <Image
-                src="/icons/analysis.png"
-                alt=""
-                width={50}
-                height={24}
-                aria-hidden
-              />
+              <TbPresentationAnalytics size={24} /> {/* TbPresentationAnalytics 아이콘 사용 */}
+              <span className="mt-1 text-sm">분석</span>
             </Link>
 
-            {/* 마이 탭 (버튼) */}
+            {/* 마이/로그인 탭 (버튼) - 로그인 상태에 따라 아이콘 변경 */}
             <button
               onClick={handleMyPageClick}
-              aria-label="마이페이지"
+              aria-label={isLoggedIn ? "마이페이지" : "로그인"}
               className={`
+                flex flex-col items-center justify-center
                 pb-1 border-b-2 transition-colors
-                ${pathname === '/mypage'
+                ${(pathname === '/mypage' && isLoggedIn) || (!isLoggedIn && showLogin) // 로그인 폼이 떠있을 때도 활성화되도록 조건 추가
                   ? 'border-black'
                   : 'border-transparent hover:border-gray-600'}
               `}
             >
-              <Image
-                src="/icons/mypage.png"
-                alt=""
-                width={50}
-                height={24}
-                aria-hidden
-              />
+              {isLoggedIn ? (
+                <MdPerson size={24} /> // 로그인 시 마이페이지 아이콘
+              ) : (
+                <MdLogin size={24} /> // 로그아웃 시 로그인 아이콘
+              )}
+              <span className="mt-1 text-sm">{isLoggedIn ? "마이" : "로그인"}</span>
             </button>
           </div>
         </nav>
@@ -93,19 +111,9 @@ export default function Navbar() {
 
       {/* LOGIN MODAL */}
       {showLogin && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-          onClick={() => setShowLogin(false)}
-        >
-          {/* 안쪽 영역 클릭은 모달 닫기 방지 */}
-          <div onClick={(e) => e.stopPropagation()}>
-            <LoginForm
-              className="max-w-sm w-full"
-              // LoginForm에 직접 onClose prop은 없으니
-              // 외부에서 감싸는 이 레이어로 닫기 처리합니다.
-            />
-          </div>
-        </div>
+        <LoginForm
+          onClose={() => setShowLogin(false)} // 모달 닫기 함수를 prop으로 전달
+        />
       )}
     </>
   )

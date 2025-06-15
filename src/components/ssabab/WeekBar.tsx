@@ -18,7 +18,7 @@ export default function WeekBar({ onDateChange }: WeekBarProps) {
     const base = new Date(today)
     base.setDate(today.getDate() + weekOffset * 7)
     // 그 주 월요일
-    const day = base.getDay()            // 일=0,... 토=6
+    const day = base.getDay()          // 일=0,... 토=6
     const monday = new Date(base)
     monday.setDate(base.getDate() - ((day + 6) % 7))
 
@@ -47,14 +47,11 @@ export default function WeekBar({ onDateChange }: WeekBarProps) {
     <div className="flex items-center space-x-2">
       {/* 지난주 버튼 */}
       <button
-        onClick={() => setWeekOffset(-1)}
-        disabled={weekOffset === -1}
+        onClick={() => setWeekOffset(weekOffset - 1)}
         className={`
           px-2 py-1 rounded focus:outline-none
           transition-opacity transition-transform duration-150
-          ${weekOffset === -1
-            ? 'opacity-50'
-            : 'opacity-100 hover:opacity-80 active:translate-x-1'}
+          opacity-100 hover:opacity-80 active:translate-x-1
         `}
       >
         &lt;&lt;
@@ -64,35 +61,34 @@ export default function WeekBar({ onDateChange }: WeekBarProps) {
       {dates.map((date, idx) => {
         const isSelected = date.toDateString() === selected.toDateString()
         return (
-          <button
-            key={date.toISOString()}
-            onClick={() => {
-              setSelected(date)
-              onDateChange?.(date.toISOString().slice(0,10))
-            }}
-            className={`
-              px-3 py-1 rounded focus:outline-none
-              transition-colors duration-150
-              ${isSelected
-                ? 'border-2 border-tomato-500 bg-white hover:bg-gray-100 font-semibold'
-                : 'border border-transparent bg-white hover:bg-gray-200 font-normal'}
-            `}
-          >
-            {labels[idx]}
-          </button>
+          <div key={date.toISOString()} className="flex flex-col items-center">
+            <span className="text-sm font-medium text-gray-700">{labels[idx]}</span> {/* 요일 표시 */}
+            <button
+              onClick={() => {
+                setSelected(date)
+                onDateChange?.(date.toISOString().slice(0,10))
+              }}
+              className={`
+                px-3 py-1 rounded focus:outline-none mt-1
+                transition-colors duration-150
+                ${isSelected
+                  ? 'border-2 border-orange-500 bg-white hover:bg-gray-100 font-semibold' // 선택된 경우 주황색 테두리
+                  : 'border border-transparent bg-white hover:bg-gray-200 font-normal'}
+              `}
+            >
+              {date.getDate()} {/* 날짜 숫자 표시 */}
+            </button>
+          </div>
         )
       })}
 
-      {/* 이번주 버튼 */}
+      {/* 다음주 버튼 */}
       <button
-        onClick={() => setWeekOffset(0)}
-        disabled={weekOffset === 0}
+        onClick={() => setWeekOffset(weekOffset + 1)}
         className={`
           px-2 py-1 rounded focus:outline-none
           transition-opacity transition-transform duration-150
-          ${weekOffset === 0
-            ? 'opacity-50'
-            : 'opacity-100 hover:opacity-80 active:-translate-x-1'}
+          opacity-100 hover:opacity-80 active:-translate-x-1
         `}
       >
         &gt;&gt;
