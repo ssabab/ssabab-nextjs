@@ -42,7 +42,7 @@ export function LoginForm({
   }
 
   return (
-    <div className={cn("flex flex-col gap-6", className)} {...props}>
+    <div className={cn("fixed inset-0 z-50 flex items-center justify-center bg-black", className)} {...props}>
       <Card className="border">
         <CardHeader>
           <CardTitle className="text-2xl text-center">로그인</CardTitle>

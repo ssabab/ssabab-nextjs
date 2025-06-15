@@ -1,24 +1,30 @@
 'use client'
 
-import LunchSection   from '@/components/ssabab/LunchSection'
+import LunchSection from '@/components/ssabab/LunchSection'
 import InsightSection from '@/components/ssabab/InsightSection'
 import FriendsSection from '@/components/ssabab/FriendsSection'
+import NoticeSection from '@/components/ssabab/NoticeSection'
+import SectionTitle from '@/components/common/SectionTitle'
 
 export default function SsababPage() {
   return (
-    <main className="min-h-screen pb-24 pt-6 px-4 bg-gray-50 container mx-auto">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 min-w-0">
-          <LunchSection />
-        </div>
+    <main className="flex-1 pb-24 pt-6 bg-gray-50">
+      <div className="container mx-auto px-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-8 min-w-0 space-y-6">
+            <SectionTitle title="오늘의 점심, 어느 쪽이 더 기대되시나요?" />
+            <LunchSection />
+          </div>
 
-        <div className="space-y-4 lg:col-span-1 min-w-0">
-          <InsightSection />
-          <FriendsSection />
+          {/* 우측 사이드바: 12컬럼 중 4컬럼 */}
+          <aside className="lg:col-span-4 min-w-0 space-y-6">
+            <InsightSection />
+            <FriendsSection />
+            <NoticeSection />
+          </aside>
+
         </div>
       </div>
     </main>
   )
 }
-
-// TODO: 배열 다시 맞춰야 함
