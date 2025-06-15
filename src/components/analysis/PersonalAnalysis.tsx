@@ -1,6 +1,5 @@
 // src/components/analysis/PersonalAnalysis.tsx
 import React from 'react';
-import { TagCloud } from 'react-tagcloud'; // react-tagcloud 임포트 (네임드 임포트)
 
 export default function PersonalAnalysis() {
   // 임시 데이터: 평균 평점 및 전체 리뷰 수
@@ -197,36 +196,28 @@ export default function PersonalAnalysis() {
           <p className="text-sm text-gray-500 mt-4">평점 기반 선호 카테고리 비중 시각화</p>
         </div>
 
-        {/* 선호 키워드 (react-tagcloud 적용) */}
+        {/* 선호 키워드 (커스텀 워드클라우드) */}
         <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
           <h3 className="text-xl font-semibold text-gray-800 mb-4">🏷️ 선호 키워드 (워드클라우드)</h3>
-          {/* 워드 클라우드가 렌더링될 컨테이너에 높이를 지정해야 합니다. */}
+          {/* 커스텀 워드 클라우드 컨테이너 */}
           <div className="h-60 w-full flex items-center justify-center bg-gray-50 rounded-md border border-gray-200 p-2 overflow-hidden">
-            <TagCloud
-              minSize={tagCloudOptions.minSize}
-              maxSize={tagCloudOptions.maxSize}
-              tags={preferredKeywordsForCloud}
-              // 단어별 색상 적용을 위해 renderer prop 사용
-              renderer={({ value, count, key, color }) => (
-                <span
-                  key={key}
-                  style={{
-                    fontSize: `${tagCloudOptions.minSize + (count / 10) * (tagCloudOptions.maxSize - tagCloudOptions.minSize)}px`,
-                    margin: '5px',
-                    padding: '5px 10px',
-                    borderRadius: '20px',
-                    backgroundColor: 'rgb(224, 242, 254)', // light blue background (Tailwind bg-blue-100)
-                    color: color || 'rgb(37, 99, 235)', // primary blue text (Tailwind text-blue-600)
-                    fontWeight: '600',
-                    cursor: 'default',
-                    transition: 'all 0.3s ease-in-out',
-                    display: 'inline-block', // inline-block으로 설정하여 margin 적용
-                  }}
-                >
-                  #{value}
-                </span>
-              )}
-            />
+            <div className="flex flex-wrap justify-center items-center gap-2 max-w-full">
+              {preferredKeywordsForCloud.map((tag, index) => {
+                const fontSize = tagCloudOptions.minSize + (tag.count / 10) * (tagCloudOptions.maxSize - tagCloudOptions.minSize);
+                return (
+                  <span
+                    key={`tag-${index}-${tag.value}`}
+                    style={{
+                      fontSize: `${fontSize}px`,
+                      color: tag.color,
+                    }}
+                    className="inline-block m-1 px-3 py-1 bg-blue-100 rounded-full font-semibold cursor-default transition-all duration-300 hover:bg-blue-200"
+                  >
+                    #{tag.value}
+                  </span>
+                );
+              })}
+            </div>
           </div>
           <p className="text-sm text-gray-500 mt-2">리뷰에서 추출된 태그 강조 (빈도에 따른 크기)</p>
         </div>
