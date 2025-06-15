@@ -98,7 +98,7 @@ export const refreshAccessToken = () =>
   api.post('/account/refresh')
 
 export const getProfile = () =>
-  api.get<{ name: string; email: string }>('/account/me')
+  api.get<{ name: string; email: string }>('/account/info')
 
 // ──────────── Menu & Voting ────────────────────────────────────────────────
 
