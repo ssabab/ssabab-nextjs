@@ -82,7 +82,7 @@ export default function LunchSection() {
               transition-all duration-200 ease-in-out font-sans
               w-14 h-16
               ${selectedDay === dayKey
-                ? 'bg-black text-white shadow-md transform scale-105'
+                ? 'bg-orange-500 text-white shadow-md transform scale-105'
                 : 'text-gray-700 hover:bg-gray-100'}
             `}
           >
@@ -100,7 +100,7 @@ export default function LunchSection() {
           className={`
             flex flex-col items-center bg-gray-50 p-4 rounded-lg shadow-sm cursor-pointer
             transition-all duration-200 ease-in-out
-            ${localSelectedMenuOption === 'A' ? 'border-2 border-orange-500 transform scale-102 shadow-lg' : 'border border-gray-100 hover:shadow-md'}
+            ${localSelectedMenuOption === 'A' ? 'border-2 bg-orange-100 border-orange-500 transform scale-102 shadow-lg' : 'border border-gray-100 hover:shadow-md'}
           `}
         >
           <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full mb-3">
@@ -120,7 +120,7 @@ export default function LunchSection() {
           className={`
             flex flex-col items-center bg-gray-50 p-4 rounded-lg shadow-sm cursor-pointer
             transition-all duration-200 ease-in-out
-            ${localSelectedMenuOption === 'B' ? 'border-2 border-orange-500 transform scale-102 shadow-lg' : 'border border-gray-100 hover:shadow-md'}
+            ${localSelectedMenuOption === 'B' ? 'border-2 bg-orange-100 border-orange-500 transform scale-102 shadow-lg' : 'border border-gray-100 hover:shadow-md'}
           `}
         >
           <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mb-3">

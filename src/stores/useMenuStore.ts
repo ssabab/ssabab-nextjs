@@ -1,33 +1,33 @@
-// src/stores/useMenuStore.ts
-import { create } from 'zustand';
-import { devtools } from 'zustand/middleware';
+import { create } from 'zustand'
+import { devtools } from 'zustand/middleware'
 
 // --- 타입 정의 ---
-type DayOfWeek = 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY';
-type WeekType = 'thisWeek' | 'lastWeek';
+export const dayLabels = {
+  MONDAY: '월',
+  TUESDAY: '화',
+  WEDNESDAY: '수',
+  THURSDAY: '목',
+  FRIDAY: '금',
+} as const
+export type DayOfWeek = keyof typeof dayLabels
+export type WeekType = 'thisWeek' | 'lastWeek'
 
 interface MenuData {
   menuA: string[];
   menuB: string[];
 }
 
-interface WeekMenus {
-  MONDAY: MenuData;
-  TUESDAY: MenuData;
-  WEDNESDAY: MenuData;
-  THURSDAY: MenuData;
-  FRIDAY: MenuData;
+export type WeekMenus = Record<DayOfWeek, MenuData>
+
+export interface WeekDateInfo {
+  dayKey: DayOfWeek;
+  date: number;
+  fullDate: Date;
 }
 
 interface TempLunchMenus {
   thisWeek: WeekMenus;
   lastWeek: WeekMenus;
-}
-
-interface WeekDateInfo {
-  dayKey: DayOfWeek;
-  date: number;
-  fullDate: Date;
 }
 
 interface MenuStoreState {
@@ -100,17 +100,17 @@ const tempLunchMenus: TempLunchMenus = {
   },
 };
 
-export const dayLabels: Record<DayOfWeek, string> = {
-  MONDAY: '월',
-  TUESDAY: '화',
-  WEDNESDAY: '수',
-  THURSDAY: '목',
-  FRIDAY: '금',
-};
+// export const dayLabels: Record<DayOfWeek, string> = {
+//   MONDAY: '월',
+//   TUESDAY: '화',
+//   WEDNESDAY: '수',
+//   THURSDAY: '목',
+//   FRIDAY: '금',
+// };
 
 const getMonday = (date: Date, weekOffset: number = 0) => {
   const d = new Date(date);
-  d.setDate(d.getDate() - d.getDay() + 1 + (weekOffset * 7));
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7) + (weekOffset * 7));
   d.setHours(0, 0, 0, 0);
   return d;
 };
