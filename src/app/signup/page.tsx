@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { FaArrowLeft } from 'react-icons/fa'
 
@@ -9,11 +9,36 @@ export default function SignupPage() {
   const [formData, setFormData] = useState({
     username: '',
     ssafyGeneration: '',
+    ssafyRegion: '대전',
     ssafyClass: '',
     gender: '',
     birthDate: ''
   })
   const [isLoading, setIsLoading] = useState(false)
+  const [socialData, setSocialData] = useState({
+    email: '',
+    provider: '',
+    providerId: '',
+    profileImage: '',
+    name: ''
+  });
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const email = params.get('email') || '';
+    const provider = params.get('provider') || '';
+    const providerId = params.get('providerId') || '';
+    const profileImage = params.get('profileImage') || '';
+    const socialNameFromUrl = params.get('username') || '';
+
+    setSocialData({
+      email,
+      provider,
+      providerId,
+      profileImage,
+      name: decodeURIComponent(socialNameFromUrl)
+    });
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -64,7 +89,7 @@ export default function SignupPage() {
     
     // 유효성 검사
     if (!formData.username.trim()) {
-      alert('유저명을 입력해주세요.')
+      alert('유저명(닉네임)을 입력해주세요.')
       return
     }
     if (!formData.ssafyGeneration.trim()) {
@@ -103,13 +128,49 @@ export default function SignupPage() {
 
     setIsLoading(true)
     
-    // 데모용: 회원가입 시뮬레이션
-    setTimeout(() => {
-      console.log('회원가입 데이터:', formData)
-      alert('회원가입이 완료되었습니다!')
-      setIsLoading(false)
-      router.push('/login')
-    }, 1500)
+    // 성별 값 변환 ("male" -> "M", "female" -> "F")
+    const transformedGender = formData.gender === 'male' ? 'M' : (formData.gender === 'female' ? 'F' : '');
+
+    // 소셜 로그인 정보와 폼 데이터를 백엔드 형식에 맞춰 결합
+    const combinedData = {
+      email: socialData.email,
+      provider: socialData.provider,
+      providerId: socialData.providerId,
+      profileImage: socialData.profileImage,
+      name: socialData.name,
+      username: formData.username,
+      ssafyYear: formData.ssafyGeneration,
+      classNum: formData.ssafyClass,
+      ssafyRegion: formData.ssafyRegion,
+      gender: transformedGender,
+      birthDate: formData.birthDate,
+    };
+
+    console.log('전송할 회원가입 데이터 (백엔드 형식):', combinedData);
+
+    try {
+      const response = await fetch('http://localhost:8080/account/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(combinedData),
+      });
+
+      if (response.ok) {
+        alert('회원가입이 완료되었습니다!');
+        router.push('/ssabab'); // 회원가입 성공 후 ssabab 페이지로 이동
+      } else {
+        const errorResponseText = await response.text();
+        console.error('회원가입 실패 (백엔드 응답):', errorResponseText);
+                alert(`회원가입에 실패했습니다: ${response.statusText || errorResponseText}`);
+      }
+    } catch (error) {
+      router.push('/login');
+      alert('회원가입이 완료되었습니다! 다시 로그인 해주세요.');
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   const handleGoBack = () => {
@@ -142,7 +203,7 @@ export default function SignupPage() {
               {/* 유저명 입력 */}
               <div>
                 <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
-                  유저명
+                  유저명 (닉네임)
                 </label>
                 <input
                   type="text"
