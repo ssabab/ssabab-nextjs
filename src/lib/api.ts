@@ -22,6 +22,11 @@ export interface Menu {
   foods: FoodInfo[]
 }
 
+// Voting
+export interface PreVotePayload { menuId: number }
+export const preVote = (payload: PreVotePayload) =>
+  api.post('/api/vote', payload)
+
 /** 로그인 수정 필요할 수도.. 구글만 구현 */
 export const getGoogleOAuthUrl = () =>
   api.get<{ url: string }>('/auth/oauth2/authorize/google')
@@ -36,8 +41,19 @@ export const logout = () =>
 export const refreshAccessToken = () =>
   api.post<{ accessToken: string }>('/account/refresh')
 
-/** 날짜별 메뉴 목록 조회 */
+/** 날짜별 메뉴 조회 */
 export const getMenu = (date: string) =>
   api.get<{ menus: Menu[] }>('/api/menu', { params: { date } })
+
+/** 메뉴 RUD */
+export interface SaveMenuPayload { date: string; foods: FoodInfo[] }
+export const postMenu = (body: SaveMenuPayload) =>
+  api.post<Menu>('/api/menu', body)
+
+export const updateMenu = (id: number, body: SaveMenuPayload) =>
+  api.put<Menu>(`/api/menu/${id}`, body)
+
+export const deleteMenu = (id: number) =>
+  api.delete<void>(`/api/menu/${id}`)
 
 export default api

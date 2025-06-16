@@ -115,7 +115,7 @@ const getMonday = (date: Date, weekOffset: number = 0) => {
   return d;
 };
 
-const getWeekDates = (currentWeekType: WeekType): WeekDateInfo[] => {
+export const computeWeekDates = (currentWeekType: WeekType): WeekDateInfo[] => {
   const today = new Date();
   const offset = currentWeekType === 'thisWeek' ? 0 : -1;
   const monday = getMonday(today, offset);
@@ -128,7 +128,7 @@ const getWeekDates = (currentWeekType: WeekType): WeekDateInfo[] => {
     dates.push({ dayKey: dayKey, date: day.getDate(), fullDate: day });
   }
   return dates;
-};
+}
 
 export const useMenuStore = create<MenuStoreState>()(
   devtools(
@@ -140,7 +140,7 @@ export const useMenuStore = create<MenuStoreState>()(
 
       // 파생된/Computed 상태
       get weekDates() {
-        return getWeekDates(get().currentWeek);
+        return computeWeekDates(get().currentWeek);
       },
       get currentWeekMenus() {
         return tempLunchMenus[get().currentWeek];
