@@ -1,145 +1,139 @@
+// components/ssabab/LunchSection.tsx
 'use client'
 
-import { useState, useEffect, useCallback } from "react" // useCallback을 import 합니다.
-import axios from "axios"
-import WeekBar from "@/components/ssabab/WeekBar"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { useRouter } from 'next/navigation'
-
-interface MenuApiResponse {
-  menus: Menu[]; // 백엔드 응답의 'menus' 키가 Menu 타입의 배열임을 명시
-}
-
-
-
-interface Menu {
-  menuId: number
-  foods: FoodItem[]
-}
-
-interface FoodItem {
-  foodId: number
-  foodName: string
-  mainSub: string
-  category: string
-  tag: string
-}
+import React, { useEffect, useState } from 'react'; // useState 다시 추가
+import { BiBowlRice } from 'react-icons/bi';
+import { useMenuStore, dayLabels } from '@/stores/useMenuStore'; // useMenuStore 임포트
 
 export default function LunchSection() {
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
-  const [menuData, setMenuData] = useState<Menu[]>([])
-  const router = useRouter()
+  // Zustand 스토어에서 필요한 상태와 액션 가져오기
+  const {
+    currentWeek,
+    selectedDay,
+    weekDates,
+    currentDayMenu,
+    isGoToLastWeekEnabled,
+    isGoToThisWeekEnabled,
+    setWeek,
+    setSelectedDay,
+    initializeSelectedDay,
+  } = useMenuStore();
 
-  const formatDateForAPI = (date: Date) => {
-    // getTimezoneOffset()은 분 단위이므로 60000(밀리초)를 곱하여 밀리초로 변환
-    const tzOffset = date.getTimezoneOffset() * 60000
-    const localDate = new Date(date.getTime() - tzOffset)
-    return localDate.toISOString().slice(0, 10)
-  }
+  // LunchSection 내부에서만 사용될 메뉴 선택 상태 (로컬 상태)
+  const [localSelectedMenuOption, setLocalSelectedMenuOption] = useState<'A' | 'B' | null>(null);
 
-  // WeekBar로부터 날짜 변경 이벤트를 받을 핸들러 함수
-  // 💡 useCallback을 사용하여 이 함수가 불필요하게 재생성되지 않도록 합니다.
-  const handleDateChange = useCallback((dateString: string) => {
-    setSelectedDate(new Date(dateString))
-  }, []) // 의존성 배열을 비워두어 컴포넌트 마운트 시 한 번만 생성되도록 합니다.
-        // setSelectedDate는 React의 setState 함수이므로 의존성으로 넣지 않아도 안정적입니다.
-
-
-// 메뉴 데이터 불러오기
+  // 컴포넌트 마운트 시 초기 요일 설정
   useEffect(() => {
-    const load = async () => {
-      try {
-        const dateStr = formatDateForAPI(selectedDate)
-        // 💡 axios.get의 제네릭 타입을 MenuApiResponse로 지정합니다.
-        const res = await axios.get<MenuApiResponse>(
-          `http://localhost:8080/api/menu?date=${dateStr}`
-        )
+    initializeSelectedDay();
+  }, [initializeSelectedDay]);
 
-        // 💡 res.data.menus를 사용하여 실제 메뉴 배열을 추출하여 setMenuData에 전달합니다.
-        if (res.data && Array.isArray(res.data.menus)) {
-          setMenuData(res.data.menus) // ✅ 여기가 핵심! res.data.menus를 할당
-        } else {
-          console.warn("API 응답이 예상된 객체.menus[] 형식이 아닙니다:", res.data)
-          setMenuData([]) // 예상과 다르면 빈 배열로 초기화
-        }
-      } catch (err) {
-        console.error("메뉴 로딩 실패:", err)
-        setMenuData([])
-      }
-    }
-    load()
-  }, [selectedDate])
+  // 요일 또는 주차 변경 시 로컬 메뉴 선택 상태 초기화
+  useEffect(() => {
+    setLocalSelectedMenuOption(null);
+  }, [selectedDay, currentWeek]);
 
-  const centerA =
-    menuData.find((m) => m.menuId % 2 === 1)?.foods || []
-  const centerB =
-    menuData.find((m) => m.menuId % 2 === 0)?.foods || []
+
+  const handleMenuSelect = (option: 'A' | 'B') => {
+    setLocalSelectedMenuOption(option); // 로컬 상태 업데이트
+    console.log(`LunchSection에서 ${currentWeek} ${selectedDay}의 메뉴 ${option}이(가) 선택되었습니다.`);
+  };
 
   return (
-    <section className="space-y-6 bg-white shadow rounded-lg p-6">
-      <h2 className="text-xl font-bold">오늘의 점심 식단 보기</h2>
-
-      {/* WeekBar 컴포넌트로 교체 */}
-      {/* 💡 useCallback으로 감싼 handleDateChange 함수를 prop으로 전달합니다. */}
-      <WeekBar onDateChange={handleDateChange} />
-
-      {/* 메뉴 카드 A/B */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* 식단 A */}
-        <div
-          className="min-w-0"
-          onClick={() =>
-            router.push(
-              `/review/1?date=${formatDateForAPI(selectedDate)}`
-            )
-          }
+    <section className="bg-white rounded-lg shadow-md p-6 font-sans">
+      {/* 주차 선택 UI */}
+      <div className="flex justify-center items-center mb-6">
+        <button
+          onClick={() => setWeek('lastWeek')}
+          disabled={!isGoToLastWeekEnabled}
+          className={`
+            p-2 rounded-full transition-colors duration-200 text-xl font-bold
+            ${isGoToLastWeekEnabled ? 'hover:bg-gray-200' : 'opacity-50 cursor-not-allowed pointer-events-none'}
+          `}
+          aria-label="저번 주 보기"
         >
-          <Card className="flex-1 border hover:shadow-md">
-            <CardContent className="p-4 space-y-2">
-              <h3 className="text-base font-medium text-gray-800">
-                식단 A
-              </h3>
-              <ul className="text-sm text-gray-600 list-disc list-inside space-y-1">
-                {centerA.map((item) => (
-                  <li key={item.foodId}>{item.foodName}</li>
-                ))}
-              </ul>
-              <div className="flex flex-wrap gap-1 pt-2">
-                <Badge variant="outline">국물 있음</Badge>
-                <Badge variant="secondary">매울 수 있음</Badge>
-              </div>
-            </CardContent>
-          </Card>
+          &lt;
+        </button>
+
+        <span className="text-2xl font-bold mx-4 font-sans">
+          {currentWeek === 'thisWeek' ? '이번 주' : '저번 주'}
+        </span>
+
+        <button
+          onClick={() => setWeek('thisWeek')}
+          disabled={!isGoToThisWeekEnabled}
+          className={`
+            p-2 rounded-full transition-colors duration-200 text-xl font-bold
+            ${isGoToThisWeekEnabled ? 'hover:bg-gray-200' : 'opacity-50 cursor-not-allowed pointer-events-none'}
+          `}
+          aria-label="이번 주 보기"
+        >
+          &gt;
+        </button>
+      </div>
+
+      {/* 요일 및 날짜 선택 그룹 */}
+      <div className="flex justify-center items-center mb-6 border-b border-gray-200 pb-4">
+        {weekDates.map(({ dayKey, date, fullDate }) => (
+          <button
+            key={dayKey}
+            onClick={() => setSelectedDay(dayKey)}
+            className={`
+              flex flex-col items-center justify-center p-2 mx-1.5 rounded-md
+              transition-all duration-200 ease-in-out font-sans
+              w-14 h-16
+              ${selectedDay === dayKey
+                ? 'bg-black text-white shadow-md transform scale-105'
+                : 'text-gray-700 hover:bg-gray-100'}
+            `}
+          >
+            <span className="text-sm font-semibold">{dayLabels[dayKey]}</span>
+            <span className="text-lg font-bold">{date}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* 선택된 요일의 메뉴 표시 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* 메뉴 A 카드 */}
+        <div
+          onClick={() => handleMenuSelect('A')}
+          className={`
+            flex flex-col items-center bg-gray-50 p-4 rounded-lg shadow-sm cursor-pointer
+            transition-all duration-200 ease-in-out
+            ${localSelectedMenuOption === 'A' ? 'border-2 border-orange-500 transform scale-102 shadow-lg' : 'border border-gray-100 hover:shadow-md'}
+          `}
+        >
+          <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full mb-3">
+             <BiBowlRice size={24} className="text-blue-600" />
+          </div>
+          <h3 className="text-xl font-semibold text-gray-800 mb-2 font-sans">메뉴 A</h3>
+          <ul className="text-gray-700 text-sm list-disc list-inside text-left w-full px-4 font-sans">
+            {currentDayMenu.menuA.map((item, index) => (
+              <li key={index} className="py-0.5">{item}</li>
+            ))}
+          </ul>
         </div>
 
-        {/* 식단 B */}
+        {/* 메뉴 B 카드 */}
         <div
-          className="min-w-0"
-          onClick={() =>
-            router.push(
-              `/review/2?date=${formatDateForAPI(selectedDate)}`
-            )
-          }
+          onClick={() => handleMenuSelect('B')}
+          className={`
+            flex flex-col items-center bg-gray-50 p-4 rounded-lg shadow-sm cursor-pointer
+            transition-all duration-200 ease-in-out
+            ${localSelectedMenuOption === 'B' ? 'border-2 border-orange-500 transform scale-102 shadow-lg' : 'border border-gray-100 hover:shadow-md'}
+          `}
         >
-          <Card className="flex-1 border hover:shadow-md">
-            <CardContent className="p-4 space-y-2">
-              <h3 className="text-base font-medium text-gray-800">
-                식단 B
-              </h3>
-              <ul className="text-sm text-gray-600 list-disc list-inside space-y-1">
-                {centerB.map((item) => (
-                  <li key={item.foodId}>{item.foodName}</li>
-                ))}
-              </ul>
-              <div className="flex flex-wrap gap-1 pt-2">
-                <Badge variant="outline">국물 없음</Badge>
-                <Badge variant="secondary">맵지 않음</Badge>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mb-3">
+            <BiBowlRice size={24} className="text-green-600" />
+          </div>
+          <h3 className="text-xl font-semibold text-gray-800 mb-2 font-sans">메뉴 B</h3>
+          <ul className="text-gray-700 text-sm list-disc list-inside text-left w-full px-4 font-sans">
+            {currentDayMenu.menuB.map((item, index) => (
+              <li key={index} className="py-0.5">{item}</li>
+            ))}
+          </ul>
         </div>
       </div>
     </section>
-  )
+  );
 }
