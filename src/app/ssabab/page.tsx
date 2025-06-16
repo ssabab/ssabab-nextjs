@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuthStore } from '@/stores/useAuthStore'
 import LunchSection from '@/components/ssabab/LunchSection'
 import InsightSection from '@/components/ssabab/InsightSection'
 import FriendsSection from '@/components/ssabab/FriendsSection'
@@ -11,19 +12,23 @@ import ReviewButtonSection from '@/components/ssabab/ReviewButtonSection'
 
 export default function SsababPage() {
   const router = useRouter()
+  const { login, initializeAuth } = useAuthStore()
 
   useEffect(() => {
+    // 페이지 로드 시 인증 상태 초기화
+    initializeAuth()
+
     const params = new URLSearchParams(window.location.search);
     const accessToken = params.get('accessToken');
 
     if (accessToken) {
-      const expires = new Date(Date.now() + 30 * 60 * 1000).toUTCString();
-      document.cookie = `accessToken=${accessToken}; path=/; SameSite=Lax; expires=${expires}`;
+      // useAuthStore를 사용해서 로그인 처리
+      login(accessToken);
       console.log('Access Token 저장됨:', accessToken);
 
       router.replace('/ssabab');
     }
-  }, [router]);
+  }, [router, login, initializeAuth]);
 
   return (
     <main className="flex-1 pb-24 pt-6 bg-gray-50">

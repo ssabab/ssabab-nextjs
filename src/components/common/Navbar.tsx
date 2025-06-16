@@ -4,16 +4,24 @@ import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
+import { useAuth, useAuthStore } from '@/stores/useAuthStore'
 
 // react-icons에서 필요한 아이콘 임포트
-import { MdLogin, MdOutlineRateReview } from 'react-icons/md' // MdOutlineRateReview 아이콘 추가
+import { MdLogin, MdOutlineRateReview, MdOutlinePersonOutline } from 'react-icons/md' // MdOutlineRateReview, MdOutlinePersonOutline 아이콘 추가
 import { BiBowlRice } from "react-icons/bi";
 import { TbPresentationAnalytics } from "react-icons/tb";
 
 export default function Navbar() {
   const pathname = usePathname()
+  const { isAuthenticated } = useAuth()
+  const { initializeAuth } = useAuthStore()
   const [scrolled, setScrolled] = useState(false)
   const [newFeature, setNewFeature] = useState(true); // 새 기능 알림 (예시)
+
+  // 인증 상태 초기화
+  useEffect(() => {
+    initializeAuth()
+  }, [initializeAuth])
 
   // 스크롤 감지하여 Navbar 그림자 조절
   useEffect(() => {
@@ -121,25 +129,46 @@ export default function Navbar() {
               )}
             </Link>
 
-            {/* 4. 로그인 탭 */}
-            <Link
-              href="/login"
-              aria-label="로그인"
-              className={`
-                flex flex-col items-center justify-center
-                relative pb-1
-                group
-                transition-transform duration-200 hover:scale-105
-              `}
-            >
-              <MdLogin size={24} className="transition-transform duration-200 group-hover:translate-x-0.5" />
-              <span className="mt-1 text-sm text-gray-800 font-medium">로그인</span>
-              <span className={`
-                absolute bottom-0 left-0 h-[2px] bg-black
-                transition-all duration-300 ease-out
-                ${pathname === '/login' ? 'w-full' : 'w-0 group-hover:w-full'}
-              `}></span>
-            </Link>
+            {/* 4. 로그인/마이페이지 탭 */}
+            {isAuthenticated ? (
+              <Link
+                href="/mypage"
+                aria-label="마이페이지"
+                className={`
+                  flex flex-col items-center justify-center
+                  relative pb-1
+                  group
+                  transition-transform duration-200 hover:scale-105
+                `}
+              >
+                <MdOutlinePersonOutline size={24} className="transition-transform duration-200 group-hover:scale-110" />
+                <span className="mt-1 text-sm text-gray-800 font-medium">마이</span>
+                <span className={`
+                  absolute bottom-0 left-0 h-[2px] bg-black
+                  transition-all duration-300 ease-out
+                  ${pathname === '/mypage' ? 'w-full' : 'w-0 group-hover:w-full'}
+                `}></span>
+              </Link>
+            ) : (
+              <Link
+                href="/login"
+                aria-label="로그인"
+                className={`
+                  flex flex-col items-center justify-center
+                  relative pb-1
+                  group
+                  transition-transform duration-200 hover:scale-105
+                `}
+              >
+                <MdLogin size={24} className="transition-transform duration-200 group-hover:translate-x-0.5" />
+                <span className="mt-1 text-sm text-gray-800 font-medium">로그인</span>
+                <span className={`
+                  absolute bottom-0 left-0 h-[2px] bg-black
+                  transition-all duration-300 ease-out
+                  ${pathname === '/login' ? 'w-full' : 'w-0 group-hover:w-full'}
+                `}></span>
+              </Link>
+            )}
           </div>
         </nav>
       </header>

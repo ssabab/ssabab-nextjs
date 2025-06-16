@@ -11,38 +11,32 @@ export default function ReviewPage() {
   const router = useRouter();
 
   const {
-    getTempLunchMenusData,
-    initializeSelectedDay,
+    currentWeekMenus,
     selectedDay,
+    initializeStore,
   } = useMenuStore();
 
-  const tempLunchMenusData = getTempLunchMenusData();
+  useEffect(() => {
+    initializeStore();
+  }, [initializeStore]);
+
+  const todayMenu = currentWeekMenus ? currentWeekMenus[selectedDay] : null;
 
   const [selectedMenuOption, setSelectedMenuOption] = useState<'A' | 'B' | null>(null);
   const [showReviewForm, setShowReviewForm] = useState(false);
-
   const [itemRatings, setItemRatings] = useState<Record<string, number>>({});
   const [isSatisfied, setIsSatisfied] = useState<boolean | null>(null);
   const [oneLineReview, setOneLineReview] = useState<string>('');
-
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [showConfirmSubmitModal, setShowConfirmSubmitModal] = useState(false); // 제출 확인 모달 상태
-  const [confirmMessage, setConfirmMessage] = useState(''); // 제출 확인 메시지
-
+  const [showConfirmSubmitModal, setShowConfirmSubmitModal] = useState(false);
+  const [confirmMessage, setConfirmMessage] = useState('');
   const reviewFormRef = useRef<HTMLDivElement>(null);
-
   const [parentMinHeight, setParentMinHeight] = useState('400px');
-
-  // 화면 크기 상태 (Confetti 애니메이션에 사용)
   const [windowSize, setWindowSize] = useState({
     width: typeof window !== 'undefined' ? window.innerWidth : 0,
     height: typeof window !== 'undefined' ? window.innerHeight : 0,
   });
-
-  useEffect(() => {
-    initializeSelectedDay();
-  }, [initializeSelectedDay]);
 
   useEffect(() => {
     if (showReviewForm) {
@@ -56,29 +50,21 @@ export default function ReviewPage() {
     }
   }, [showReviewForm, reviewFormRef.current?.offsetHeight]);
 
-  // 창 크기 변경 감지 (Confetti 애니메이션에 사용)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const handleResize = () => {
         setWindowSize({ width: window.innerWidth, height: window.innerHeight });
       };
       window.addEventListener('resize', handleResize);
-      handleResize(); // 컴포넌트 마운트 시 초기 크기 설정
-      return () => window.removeEventListener('resize', handleResize); // 언마운트 시 이벤트 리스너 제거
+      handleResize();
+      return () => window.removeEventListener('resize', handleResize);
     }
   }, []);
 
   const today = new Date();
   const month = today.getMonth() + 1;
   const date = today.getDate();
-  // dayLabels는 숫자를 키로 가지므로, selectedDay의 유효성을 정확히 확인합니다.
-  const dayOfWeekLabel = selectedDay !== undefined && dayLabels.hasOwnProperty(selectedDay) ? dayLabels[selectedDay] : '';
-
-
-  const tempLunchMenusData_thisWeek_selectedDay = tempLunchMenusData ? tempLunchMenusData['thisWeek'][selectedDay] : undefined;
-  const todayMenu = selectedDay !== undefined && tempLunchMenusData_thisWeek_selectedDay !== undefined
-    ? tempLunchMenusData_thisWeek_selectedDay
-    : null;
+  const dayOfWeekLabel = selectedDay && dayLabels[selectedDay] ? dayLabels[selectedDay] : '';
 
   const handleMenuCardClick = (option: 'A' | 'B') => {
     setSelectedMenuOption(option);
@@ -379,85 +365,82 @@ export default function ReviewPage() {
         </div>
       </div>
 
-      {/* 뒤로가기 확인 모달 */}
+      {/* 취소 확인 모달 */}
       {showCancelModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-xl text-center max-w-xs mx-auto">
-            <p className="text-lg font-semibold mb-4">지금까지의 평가가 모두 사라집니다. 괜찮으신가요?</p>
-            <div className="flex justify-center space-x-4">
-              <button
-                onClick={confirmCancel}
-                className="px-5 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
-              >
-                예
-              </button>
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white p-8 rounded-lg shadow-2xl max-w-sm w-full text-center">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">정말 취소하시겠어요?</h3>
+            <p className="text-gray-600 mb-8">작성하던 모든 내용이 사라져요.</p>
+            <div className="flex justify-center gap-4">
               <button
                 onClick={cancelCancel}
-                className="px-5 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition-colors"
+                className="px-6 py-2 rounded-lg bg-gray-200 text-gray-800 font-semibold hover:bg-gray-300 transition-colors"
               >
-                아니오
+                계속 작성
+              </button>
+              <button
+                onClick={confirmCancel}
+                className="px-6 py-2 rounded-lg bg-red-500 text-white font-semibold hover:bg-red-600 transition-colors"
+              >
+                작성 취소
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 제출 확인 모달 - 배경 블러 처리 적용 */}
+      {/* 제출 확인 모달 */}
       {showConfirmSubmitModal && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/20 backdrop-blur-sm">
-          <div className="bg-white p-6 rounded-lg shadow-xl text-center max-w-xs mx-auto">
-            <p className="text-lg font-semibold mb-4">{confirmMessage}</p>
-            <div className="flex justify-center space-x-4">
-              <button
-                onClick={executeSubmission}
-                className="px-5 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 transition-colors"
-              >
-                예
-              </button>
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white p-8 rounded-lg shadow-2xl max-w-sm w-full text-center">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">{confirmMessage}</h3>
+            <div className="flex justify-center gap-4 mt-8">
               <button
                 onClick={() => setShowConfirmSubmitModal(false)}
-                className="px-5 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition-colors"
+                className="px-6 py-2 rounded-lg bg-gray-200 text-gray-800 font-semibold hover:bg-gray-300 transition-colors"
               >
-                아니오
+                아니요
+              </button>
+              <button
+                onClick={executeSubmission}
+                className="px-6 py-2 rounded-lg bg-green-500 text-white font-semibold hover:bg-green-600 transition-colors"
+              >
+                네, 제출합니다
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 감사 메시지 모달 (폭죽 애니메이션 추가) */}
+      {/* 성공 모달 */}
       {showSuccessModal && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/20 backdrop-blur-sm">
-          {/* Confetti 컴포넌트 추가 */}
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
+          {/* Confetti 애니메이션 */}
           <Confetti
             width={windowSize.width}
             height={windowSize.height}
-            recycle={false} // 한 번만 터지도록 설정
-            numberOfPieces={200} // 폭죽 조각 개수
-            gravity={0.1} // 중력 조절
-            initialVelocityY={20} // 초기 수직 속도
-            confettiSource={{ // 폭죽이 터지는 시작점 (모달 중앙 상단에서 아래로 퍼지도록)
-              x: windowSize.width / 2,
-              y: window.innerHeight / 2 - 100, // 모달 중앙 상단으로 조정
-              w: 0,
-              h: 0,
-            }}
-            colors={['#fce18a', '#ff726d', '#f4306d', '#b881f2', '#d2f779', '#FFA07A', '#FFD700']} // 다양한 색상
+            recycle={false}
+            numberOfPieces={300}
+            gravity={0.1}
           />
-          <div className="bg-white p-8 rounded-lg shadow-xl text-center max-w-sm mx-auto relative"> {/* relative 추가 */}
-            <p className="text-2xl font-bold text-gray-800 mb-6">소중한 평가 감사합니다!</p>
-            <div className="flex flex-col space-y-3">
-              <button
-                onClick={handleGoToSsabab}
-                className="bg-orange-500 text-white px-6 py-3 rounded-xl font-bold text-lg hover:bg-orange-600 transition-colors w-full"
-              >
-                싸밥으로 이동
-              </button>
+          <div className="bg-white p-10 rounded-lg shadow-2xl max-w-md w-full text-center transform transition-all scale-100">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-5">
+              <span className="text-4xl">🎉</span>
+            </div>
+            <h3 className="text-2xl font-bold text-gray-800 mb-3">평가해주셔서 감사합니다!</h3>
+            <p className="text-gray-600 mb-8">여러분의 소중한 의견은 더 나은 점심을 만드는 데 큰 도움이 됩니다.</p>
+            <div className="flex justify-center gap-4">
               <button
                 onClick={handleGoToAnalysis}
-                className="bg-gray-200 text-gray-800 px-6 py-3 rounded-xl font-bold text-lg hover:bg-gray-300 transition-colors w-full"
+                className="px-6 py-3 rounded-lg bg-gray-800 text-white font-semibold hover:bg-black transition-colors flex-1"
               >
-                분석 보러 가기
+                분석 페이지 <br /> 보러가기
+              </button>
+              <button
+                onClick={handleGoToSsabab}
+                className="px-6 py-3 rounded-lg bg-gray-200 text-gray-800 font-semibold hover:bg-gray-300 transition-colors flex-1"
+              >
+                메인 페이지 <br /> 보러가기 
               </button>
             </div>
           </div>

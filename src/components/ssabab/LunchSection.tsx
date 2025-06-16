@@ -1,41 +1,53 @@
 // components/ssabab/LunchSection.tsx
 'use client'
 
-import React, { useEffect, useState } from 'react'; // useState 다시 추가
+import React, { useEffect, useState } from 'react';
 import { BiBowlRice } from 'react-icons/bi';
-import { useMenuStore, dayLabels } from '@/stores/useMenuStore'; // useMenuStore 임포트
+import { useMenuStore, dayLabels } from '@/stores/useMenuStore';
 
 export default function LunchSection() {
-  // Zustand 스토어에서 필요한 상태와 액션 가져오기
+  // 스토어에서 상태와 액션을 직접 가져옵니다.
   const {
     currentWeek,
     selectedDay,
     weekDates,
-    currentDayMenu,
+    currentWeekMenus,
     isGoToLastWeekEnabled,
     isGoToThisWeekEnabled,
     setWeek,
     setSelectedDay,
-    initializeSelectedDay,
+    initializeStore,
   } = useMenuStore();
 
-  // LunchSection 내부에서만 사용될 메뉴 선택 상태 (로컬 상태)
+  // 선택된 요일의 메뉴 데이터를 가져옵니다.
+  const currentDayMenu = currentWeekMenus[selectedDay];
+
   const [localSelectedMenuOption, setLocalSelectedMenuOption] = useState<'A' | 'B' | null>(null);
 
-  // 컴포넌트 마운트 시 초기 요일 설정
+  // 컴포넌트 마운트 시 스토어 초기화
   useEffect(() => {
-    initializeSelectedDay();
-  }, [initializeSelectedDay]);
+    initializeStore();
+  }, [initializeStore]);
 
   // 요일 또는 주차 변경 시 로컬 메뉴 선택 상태 초기화
   useEffect(() => {
     setLocalSelectedMenuOption(null);
   }, [selectedDay, currentWeek]);
 
-
   const handleMenuSelect = (option: 'A' | 'B') => {
-    setLocalSelectedMenuOption(option); // 로컬 상태 업데이트
-    console.log(`LunchSection에서 ${currentWeek} ${selectedDay}의 메뉴 ${option}이(가) 선택되었습니다.`);
+    setLocalSelectedMenuOption(option);
+  };
+
+  const weekTitle = () => {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    if (currentWeek === 'thisWeek' && (dayOfWeek === 0 || dayOfWeek === 6)) {
+      return '다음 주';
+    }
+    if (currentWeek === 'thisWeek') {
+      return '이번 주';
+    }
+    return '저번 주';
   };
 
   return (
@@ -47,7 +59,7 @@ export default function LunchSection() {
           disabled={!isGoToLastWeekEnabled}
           className={`
             p-2 rounded-full transition-colors duration-200 text-xl font-bold
-            ${isGoToLastWeekEnabled ? 'hover:bg-gray-200' : 'opacity-50 cursor-not-allowed pointer-events-none'}
+            ${isGoToLastWeekEnabled ? 'hover:bg-gray-200' : 'opacity-50 cursor-not-allowed'}
           `}
           aria-label="저번 주 보기"
         >
@@ -55,7 +67,7 @@ export default function LunchSection() {
         </button>
 
         <span className="text-2xl font-bold mx-4 font-sans">
-          {currentWeek === 'thisWeek' ? '이번 주' : '저번 주'}
+          {weekTitle()}
         </span>
 
         <button
@@ -63,7 +75,7 @@ export default function LunchSection() {
           disabled={!isGoToThisWeekEnabled}
           className={`
             p-2 rounded-full transition-colors duration-200 text-xl font-bold
-            ${isGoToThisWeekEnabled ? 'hover:bg-gray-200' : 'opacity-50 cursor-not-allowed pointer-events-none'}
+            ${isGoToThisWeekEnabled ? 'hover:bg-gray-200' : 'opacity-50 cursor-not-allowed'}
           `}
           aria-label="이번 주 보기"
         >
@@ -73,23 +85,29 @@ export default function LunchSection() {
 
       {/* 요일 및 날짜 선택 그룹 */}
       <div className="flex justify-center items-center mb-6 border-b border-gray-200 pb-4">
-        {weekDates.map(({ dayKey, date, fullDate }) => (
-          <button
-            key={dayKey}
-            onClick={() => setSelectedDay(dayKey)}
-            className={`
-              flex flex-col items-center justify-center p-2 mx-1.5 rounded-md
-              transition-all duration-200 ease-in-out font-sans
-              w-14 h-16
-              ${selectedDay === dayKey
-                ? 'bg-black text-white shadow-md transform scale-105'
-                : 'text-gray-700 hover:bg-gray-100'}
-            `}
-          >
-            <span className="text-sm font-semibold">{dayLabels[dayKey]}</span>
-            <span className="text-lg font-bold">{date}</span>
-          </button>
-        ))}
+        {weekDates.map(({ dayKey, date, fullDate }) => {
+          const isToday = new Date().toDateString() === fullDate.toDateString();
+          return (
+            <button
+              key={dayKey}
+              onClick={() => setSelectedDay(dayKey)}
+              className={`
+                flex flex-col items-center justify-center p-2 mx-1.5 rounded-md
+                transition-all duration-200 ease-in-out font-sans
+                w-14 h-16 relative
+                ${selectedDay === dayKey
+                  ? 'bg-black text-white shadow-md transform scale-105'
+                  : 'text-gray-700 hover:bg-gray-100'}
+              `}
+            >
+              <span className="text-sm font-semibold">{dayLabels[dayKey]}</span>
+              <span className="text-lg font-bold">{date}</span>
+              {isToday && (
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full border-2 border-white"></div>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* 선택된 요일의 메뉴 표시 */}
