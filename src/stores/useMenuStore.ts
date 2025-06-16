@@ -25,92 +25,51 @@ export interface WeekDateInfo {
   fullDate: Date;
 }
 
-interface TempLunchMenus {
-  thisWeek: WeekMenus;
-  lastWeek: WeekMenus;
+interface WeekDateInfo {
+  dayKey: DayOfWeek;
+  date: number;
+  fullDate: Date;
 }
 
 interface MenuStoreState {
   // 상태
   currentWeek: WeekType;
   selectedDay: DayOfWeek;
-  // selectedMenuOption: 'A' | 'B' | null; <-- 이 줄 제거
-
-  // 파생된/Computed 상태 (getter처럼 사용)
   weekDates: WeekDateInfo[];
   currentWeekMenus: WeekMenus;
-  currentDayMenu: MenuData;
+
+  // 파생된/Computed 상태 (컴포넌트에서 필요 시 계산)
   isGoToLastWeekEnabled: boolean;
   isGoToThisWeekEnabled: boolean;
-
-  getTempLunchMenusData: () => TempLunchMenus;
 
   // 액션
   setWeek: (week: WeekType) => void;
   setSelectedDay: (day: DayOfWeek) => void;
-  // setSelectedMenuOption: (option: 'A' | 'B' | null) => void; <-- 이 줄 제거
-  initializeSelectedDay: () => void;
+  initializeStore: () => void; // 초기화 액션 통합
+  _updateDerivedState: () => void; // 파생 상태 업데이트 내부 함수
 }
 
-// --- 임시 메뉴 데이터 ---
-const tempLunchMenus: TempLunchMenus = {
-  thisWeek: {
-    MONDAY: {
-      menuA: ["쌀밥", "제육볶음", "상추쌈", "계란찜", "콩나물국", "배추김치"],
-      menuB: ["보리밥", "된장찌개", "두부조림", "오이무침", "멸치볶음", "깍두기"],
-    },
-    TUESDAY: {
-      menuA: ["잡곡밥", "김치찌개", "고등어구이", "시금치나물", "어묵볶음", "깍두기"],
-      menuB: ["밥", "돈까스", "스프", "샐러드", "단무지", "피클"],
-    },
-    WEDNESDAY: {
-      menuA: ["현미밥", "비빔밥", "고추장", "참기름", "미역국", "김치"],
-      menuB: ["초밥", "미소장국", "새우튀김", "락교", "생강절임", "간장"],
-    },
-    THURSDAY: {
-      menuA: ["밥", "닭갈비", "볶음밥재료", "쌈무", "동치미", "야채"],
-      menuB: ["파스타", "마늘빵", "샐러드", "피클", "콜라", "수제피클"],
-    },
-    FRIDAY: {
-      menuA: ["밥", "불고기", "잡채", "호박전", "콩자반", "김치"],
-      menuB: ["치킨", "감자튀김", "콜라", "치킨무", "샐러드", "소스"],
-    },
-  },
-  lastWeek: {
-    MONDAY: {
-      menuA: ["콩밥", "카레라이스", "감자채볶음", "오징어젓갈", "맑은 장국", "총각김치"],
-      menuB: ["쌀밥", "순두부찌개", "계란말이", "미역줄기볶음", "김자반", "배추김치"],
-    },
-    TUESDAY: {
-      menuA: ["보리밥", "순대국밥", "깍두기", "부추무침", "새우젓", "양파"],
-      menuB: ["흰쌀밥", "김치볶음밥", "계란후라이", "단무지", "콘샐러드", "유부장국"],
-    },
-    WEDNESDAY: {
-      menuA: ["잡곡밥", "고추장불고기", "쌈채소", "마늘", "쌈장", "물김치"],
-      menuB: ["볶음밥", "짜장면", "탕수육", "군만두", "단무지", "짬뽕국물"],
-    },
-    THURSDAY: {
-      menuA: ["쌀밥", "삼계탕", "깍두기", "인삼주", "마늘", "대추"],
-      menuB: ["현미밥", "생선구이", "콩나물국", "진미채볶음", "취나물", "배추김치"],
-    },
-    FRIDAY: {
-      menuA: ["김밥", "떡볶이", "순대", "튀김", "어묵탕", "단무지"],
-      menuB: ["햄버거", "감자튀김", "콜라", "케첩", "피클", "양파링"],
-    },
-  },
+export const dayLabels: Record<DayOfWeek, string> = {
+  MONDAY: '월',
+  TUESDAY: '화',
+  WEDNESDAY: '수',
+  THURSDAY: '목',
+  FRIDAY: '금',
 };
 
-// export const dayLabels: Record<DayOfWeek, string> = {
-//   MONDAY: '월',
-//   TUESDAY: '화',
-//   WEDNESDAY: '수',
-//   THURSDAY: '목',
-//   FRIDAY: '금',
-// };
+// --- 유틸리티 함수 ---
 
-const getMonday = (date: Date, weekOffset: number = 0) => {
+const getMonday = (date: Date, weekOffset: number = 0): Date => {
   const d = new Date(date);
-  d.setDate(d.getDate() - ((d.getDay() + 6) % 7) + (weekOffset * 7));
+  // getDay()는 일요일=0, 월요일=1, ..., 토요일=6을 반환합니다.
+  // 월요일을 주의 시작으로 간주하기 위해, 일요일(0)을 7로 취급합니다.
+  const day = d.getDay() || 7; 
+  if (day !== 1) {
+    // 현재 요일이 월요일이 아니면, 월요일로 이동시킵니다.
+    d.setHours(-24 * (day - 1));
+  }
+  // 주차 오프셋 적용
+  d.setDate(d.getDate() + weekOffset * 7);
   d.setHours(0, 0, 0, 0);
   return d;
 };
@@ -120,15 +79,60 @@ export const computeWeekDates = (currentWeekType: WeekType): WeekDateInfo[] => {
   const offset = currentWeekType === 'thisWeek' ? 0 : -1;
   const monday = getMonday(today, offset);
 
-  const dates: WeekDateInfo[] = [];
-  for (let i = 0; i < 5; i++) {
+  return Object.keys(dayLabels).map((dayKey, i) => {
     const day = new Date(monday);
     day.setDate(monday.getDate() + i);
-    const dayKey = Object.keys(dayLabels)[i] as DayOfWeek;
-    dates.push({ dayKey: dayKey, date: day.getDate(), fullDate: day });
-  }
-  return dates;
-}
+    return {
+      dayKey: dayKey as DayOfWeek,
+      date: day.getDate(),
+      fullDate: day,
+    };
+  });
+};
+
+const generateMenuForDate = (date: Date): MenuData => {
+  const dayOfMonth = date.getDate();
+  const monthOffset = date.getMonth();
+  
+  const menuOptions = [
+    {
+      menuA: ["쌀밥", "제육볶음", "상추쌈", "계란찜", "콩나물국", "배추김치"],
+      menuB: ["보리밥", "된장찌개", "두부조림", "오이무침", "멸치볶음", "깍두기"],
+    },
+    {
+      menuA: ["잡곡밥", "닭갈비", "깻잎쌈", "어묵볶음", "미역국", "갓김치"],
+      menuB: ["현미밥", "고등어구이", "시금치나물", "연근조림", "소고기무국", "열무김치"],
+    },
+    {
+      menuA: ["흑미밥", "소불고기", "잡채", "호박전", "순두부찌개", "총각김치"],
+      menuB: ["쌀밥", "돈까스", "양배추샐러드", "마카로니콘샐러드", "크림스프", "깍두기"],
+    },
+    {
+      menuA: ["카레라이스", "치킨가라아게", "오복지무침", "유부장국", "샐러리피클", "배추김치"],
+      menuB: ["김치볶음밥", "계란후라이", "미니돈까스", "콩나물국", "단무지", "콘샐러드"],
+    },
+    {
+      menuA: ["잔치국수", "왕만두", "단무지무침", "부추겉절이", "계란지단", "멸치육수"],
+      menuB: ["짜장면", "탕수육", "군만두", "단무지", "양파", "짬뽕국물"],
+    },
+  ];
+  
+  return menuOptions[(dayOfMonth + monthOffset) % menuOptions.length];
+};
+
+const generateWeekMenus = (weekDates: WeekDateInfo[]): WeekMenus => {
+    return {
+        MONDAY: generateMenuForDate(weekDates[0].fullDate),
+        TUESDAY: generateMenuForDate(weekDates[1].fullDate),
+        WEDNESDAY: generateMenuForDate(weekDates[2].fullDate),
+        THURSDAY: generateMenuForDate(weekDates[3].fullDate),
+        FRIDAY: generateMenuForDate(weekDates[4].fullDate),
+    };
+};
+
+// --- 스토어 생성 ---
+const initialWeekDates = getWeekDates('thisWeek');
+const initialMenus = generateWeekMenus(initialWeekDates);
 
 export const useMenuStore = create<MenuStoreState>()(
   devtools(
@@ -136,39 +140,46 @@ export const useMenuStore = create<MenuStoreState>()(
       // 초기 상태
       currentWeek: 'thisWeek',
       selectedDay: 'MONDAY',
-      // selectedMenuOption: null, <-- 이 줄 제거
+      weekDates: initialWeekDates,
+      currentWeekMenus: initialMenus,
+      isGoToLastWeekEnabled: true,
+      isGoToThisWeekEnabled: false,
 
-      // 파생된/Computed 상태
-      get weekDates() {
-        return computeWeekDates(get().currentWeek);
+      // 파생 상태 업데이트 함수
+      _updateDerivedState: () => {
+        const currentWeek = get().currentWeek;
+        const weekDates = getWeekDates(currentWeek);
+        const currentWeekMenus = generateWeekMenus(weekDates);
+        set({
+          weekDates,
+          currentWeekMenus,
+          isGoToLastWeekEnabled: currentWeek === 'thisWeek',
+          isGoToThisWeekEnabled: currentWeek === 'lastWeek',
+        });
       },
-      get currentWeekMenus() {
-        return tempLunchMenus[get().currentWeek];
-      },
-      get currentDayMenu() {
-        return tempLunchMenus[get().currentWeek][get().selectedDay];
-      },
-      get isGoToLastWeekEnabled() {
-        return get().currentWeek === 'thisWeek';
-      },
-      get isGoToThisWeekEnabled() {
-        return get().currentWeek === 'lastWeek';
-      },
-      getTempLunchMenusData: () => tempLunchMenus,
 
       // 액션
-      setWeek: (week) => set({ currentWeek: week }), // selectedMenuOption 초기화 로직 제거
-      setSelectedDay: (day) => set({ selectedDay: day }), // selectedMenuOption 초기화 로직 제거
-      // setSelectedMenuOption: (option) => set({ selectedMenuOption: option }), <-- 이 액션 제거
-      initializeSelectedDay: () => {
+      setWeek: (week) => {
+        set({ currentWeek: week });
+        get()._updateDerivedState();
+      },
+      
+      setSelectedDay: (day) => set({ selectedDay: day }),
+
+      initializeStore: () => {
         const today = new Date();
-        const currentDayOfWeek = today.getDay();
-        if (currentDayOfWeek >= 1 && currentDayOfWeek <= 5) {
-          const todayDayKey = Object.keys(dayLabels)[currentDayOfWeek - 1] as DayOfWeek;
-          set({ selectedDay: todayDayKey });
+        const dayOfWeek = today.getDay();
+
+        // 주말(토, 일)이면 currentWeek를 'thisWeek'으로 유지하고 (다음 주를 의미)
+        // selectedDay는 월요일로 설정합니다.
+        if (dayOfWeek === 0 || dayOfWeek === 6) {
+          set({ selectedDay: 'MONDAY', currentWeek: 'thisWeek' });
         } else {
-          set({ selectedDay: 'MONDAY' });
+        // 평일이면 오늘 요일로 설정합니다.
+          const todayDayKey = Object.keys(dayLabels)[dayOfWeek - 1] as DayOfWeek;
+          set({ selectedDay: todayDayKey, currentWeek: 'thisWeek' });
         }
+        get()._updateDerivedState();
       },
     }),
     {

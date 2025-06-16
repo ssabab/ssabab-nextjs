@@ -1,13 +1,35 @@
 'use client'
 
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuthStore } from '@/stores/useAuthStore'
 import LunchSection from '@/components/ssabab/LunchSection'
 import InsightSection from '@/components/ssabab/InsightSection'
 import FriendsSection from '@/components/ssabab/FriendsSection'
 import NoticeSection from '@/components/ssabab/NoticeSection'
 import SectionTitle from '@/components/common/SectionTitle'
-import ReviewButtonSection from '@/components/ssabab/ReviewButtonSection' // <-- 이 줄 추가
+import ReviewButtonSection from '@/components/ssabab/ReviewButtonSection'
 
 export default function SsababPage() {
+  const router = useRouter()
+  const { login, initializeAuth } = useAuthStore()
+
+  useEffect(() => {
+    // 페이지 로드 시 인증 상태 초기화
+    initializeAuth()
+
+    const params = new URLSearchParams(window.location.search);
+    const accessToken = params.get('accessToken');
+
+    if (accessToken) {
+      // useAuthStore를 사용해서 로그인 처리
+      login(accessToken);
+      console.log('Access Token 저장됨:', accessToken);
+
+      router.replace('/ssabab');
+    }
+  }, [router, login, initializeAuth]);
+
   return (
     <main className="flex-1 pb-24 pt-6 bg-gray-50">
       <div className="container mx-auto px-4">
@@ -15,10 +37,9 @@ export default function SsababPage() {
           <div className="lg:col-span-8 min-w-0 space-y-6">
             <SectionTitle title="오늘의 점심, 어느 쪽이 더 기대되시나요?" />
             <LunchSection />
-            <ReviewButtonSection /> {/* <-- 이 줄 추가 */}
+            <ReviewButtonSection />
           </div>
 
-          {/* 우측 사이드바: 12컬럼 중 4컬럼 */}
           <aside className="lg:col-span-4 min-w-0 space-y-6">
             <InsightSection />
             <FriendsSection />

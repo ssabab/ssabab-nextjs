@@ -9,16 +9,9 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
 
   const handleGoogleLogin = async () => {
-    setIsLoading(true)
-    // 실제 구글 소셜 로그인 로직을 여기에 구현합니다.
-    console.log('구글 로그인 버튼 클릭됨! 실제 Google OAuth 로직을 구현하세요.')
-    
-    // 데모용: 로딩 시뮬레이션
-    setTimeout(() => {
-      alert('데모 모드: 로그인이 완료되었습니다!')
-      setIsLoading(false)
-      router.push('/') // 메인 페이지로 이동
-    }, 1500)
+    setIsLoading(true);
+    // 브라우저를 백엔드 로그인 엔드포인트로 직접 리디렉션하여 Google OAuth 흐름 시작
+    window.location.href = 'http://localhost:8080/account/login';
   }
 
   const handleGithubLogin = async () => {
