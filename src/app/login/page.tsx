@@ -30,7 +30,7 @@ export default function LoginPage() {
     // 다른 페이지와 동일한 스타일링 적용
     <main className="flex-1 pb-24 pt-20 bg-gray-50 font-sans min-h-screen">
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-center min-h-[calc(100vh-160px)]">
+        <div className="flex items-start justify-center min-h-[calc(100vh-160px)]">
           {/* 로그인 카드 */}
           <div className="bg-white p-8 sm:p-10 rounded-lg shadow-md border border-gray-200 w-full max-w-md flex flex-col items-center text-center
                       transform transition-all duration-300 hover:shadow-lg">
@@ -68,6 +68,7 @@ export default function LoginPage() {
               </button>
 
               {/* 깃허브 로그인 버튼 */}
+              {/*
               <button
                 onClick={handleGithubLogin}
                 disabled={isLoading}
@@ -85,6 +86,7 @@ export default function LoginPage() {
                 )}
                 GitHub으로 계속하기
               </button>
+              */}
             </div>
 
             {/* 구분선 */}
