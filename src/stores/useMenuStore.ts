@@ -1,28 +1,22 @@
-import { create } from 'zustand'
-import { devtools } from 'zustand/middleware'
+// src/stores/useMenuStore.ts
+import { create } from 'zustand';
+import { devtools } from 'zustand/middleware';
 
 // --- 타입 정의 ---
-export const dayLabels = {
-  MONDAY: '월',
-  TUESDAY: '화',
-  WEDNESDAY: '수',
-  THURSDAY: '목',
-  FRIDAY: '금',
-} as const
-export type DayOfWeek = keyof typeof dayLabels
-export type WeekType = 'thisWeek' | 'lastWeek'
+type DayOfWeek = 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY';
+type WeekType = 'thisWeek' | 'lastWeek';
 
 interface MenuData {
   menuA: string[];
   menuB: string[];
 }
 
-export type WeekMenus = Record<DayOfWeek, MenuData>
-
-export interface WeekDateInfo {
-  dayKey: DayOfWeek;
-  date: number;
-  fullDate: Date;
+interface WeekMenus {
+  MONDAY: MenuData;
+  TUESDAY: MenuData;
+  WEDNESDAY: MenuData;
+  THURSDAY: MenuData;
+  FRIDAY: MenuData;
 }
 
 interface WeekDateInfo {
@@ -74,7 +68,7 @@ const getMonday = (date: Date, weekOffset: number = 0): Date => {
   return d;
 };
 
-export const computeWeekDates = (currentWeekType: WeekType): WeekDateInfo[] => {
+const getWeekDates = (currentWeekType: WeekType): WeekDateInfo[] => {
   const today = new Date();
   const offset = currentWeekType === 'thisWeek' ? 0 : -1;
   const monday = getMonday(today, offset);
