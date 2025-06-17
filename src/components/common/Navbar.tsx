@@ -132,7 +132,7 @@ export default function Navbar() {
             {/* 4. 로그인/마이페이지 탭 */}
             {isAuthenticated ? (
               <Link
-                href="/mypage"
+                href="/my"
                 aria-label="마이페이지"
                 className={`
                   flex flex-col items-center justify-center
@@ -146,7 +146,7 @@ export default function Navbar() {
                 <span className={`
                   absolute bottom-0 left-0 h-[2px] bg-black
                   transition-all duration-300 ease-out
-                  ${pathname === '/mypage' ? 'w-full' : 'w-0 group-hover:w-full'}
+                  ${pathname === '/my' ? 'w-full' : 'w-0 group-hover:w-full'}
                 `}></span>
               </Link>
             ) : (
