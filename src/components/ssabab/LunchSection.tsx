@@ -1,54 +1,82 @@
-// components/ssabab/LunchSection.tsx
 'use client'
 
-import React, { useEffect, useState } from 'react';
-import { BiBowlRice } from 'react-icons/bi';
-import { useMenuStore, dayLabels } from '@/stores/useMenuStore';
+import React, { useEffect, useState, useCallback, useMemo } from 'react'
+import { BiBowlRice } from 'react-icons/bi'
+import { useMenuStore, dayLabels } from '@/stores/useMenuStore'
+import { useAuthStore } from '@/stores/useAuthStore'
+import { Menu, getMenu, preVote } from '@/lib/api'
 
 export default function LunchSection() {
-  // 스토어에서 상태와 액션을 직접 가져옵니다.
+  const isAuthenticated = useAuthStore(s => s.isAuthenticated)
+
   const {
     currentWeek,
     selectedDay,
     weekDates,
-    currentWeekMenus,
     isGoToLastWeekEnabled,
     isGoToThisWeekEnabled,
     setWeek,
     setSelectedDay,
     initializeStore,
-  } = useMenuStore();
+  } = useMenuStore()
 
-  // 선택된 요일의 메뉴 데이터를 가져옵니다.
-  const currentDayMenu = currentWeekMenus[selectedDay];
+  // 컴포넌트 로컬 상태
+  const [menus, setMenus] = useState<Menu[]>([])
+  const [localVote, setLocalVote] = useState<'A'|'B'|null>(null)
 
-  const [localSelectedMenuOption, setLocalSelectedMenuOption] = useState<'A' | 'B' | null>(null);
+  const todayKey = useMemo(() => {
+    const d = new Date()
+    return `lunchVote_${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
+  }, [])
 
-  // 컴포넌트 마운트 시 스토어 초기화
+  // 투표 가능 여부 (00~12시)
+  const hour = new Date().getHours()
+  const canVote = hour < 12
+
+  // 마운트 시 스토어 초기화, 저장된 투표 로드
   useEffect(() => {
-    initializeStore();
-  }, [initializeStore]);
+    initializeStore()
+    if (isAuthenticated) {
+      const saved = localStorage.getItem(todayKey)
+      if (saved === 'A' || saved === 'B') setLocalVote(saved)
+    }
+  }, [initializeStore, isAuthenticated, todayKey])
 
   // 요일 또는 주차 변경 시 로컬 메뉴 선택 상태 초기화
   useEffect(() => {
-    setLocalSelectedMenuOption(null);
-  }, [selectedDay, currentWeek]);
+    const info = weekDates.find(d => d.dayKey === selectedDay)!
+    const iso  = info.fullDate.toISOString().slice(0,10)
 
-  const handleMenuSelect = (option: 'A' | 'B') => {
-    setLocalSelectedMenuOption(option);
-  };
+    getMenu(iso)
+      .then(res => setMenus(res.data.menus))
+      .catch(() => setMenus([]))
+  }, [currentWeek, selectedDay, weekDates])
 
-  const weekTitle = () => {
-    const today = new Date();
-    const dayOfWeek = today.getDay();
-    if (currentWeek === 'thisWeek' && (dayOfWeek === 0 || dayOfWeek === 6)) {
-      return '다음 주';
-    }
-    if (currentWeek === 'thisWeek') {
-      return '이번 주';
-    }
-    return '저번 주';
-  };
+  // single-click: 하이라이트만 (로그인 & 조건 검증)
+  const handleSelect = (opt: 'A'|'B') => {
+    if (!isAuthenticated) return
+    if (!canVote && localVote === null) return
+    setLocalVote(opt)
+  }
+
+  // double-click: 실제 투표 (preVote 헬퍼 사용)
+  const handleVote = useCallback(
+    async (opt: 'A'|'B') => {
+      if (!isAuthenticated || !canVote) return
+      const idx = opt === 'A' ? 0 : 1
+      const menu = menus[idx]
+      if (!menu) return
+      try {
+        await preVote({ menuId: menu.menuId })
+        localStorage.setItem(todayKey, opt)
+        setLocalVote(opt)
+        alert('투표 완료!')
+      } catch {
+        alert('투표에 실패했습니다.')
+      }
+    },
+    [menus, canVote, isAuthenticated, todayKey]
+  )
 
   return (
     <section className="bg-white rounded-lg shadow-md p-6 font-sans">
@@ -65,11 +93,9 @@ export default function LunchSection() {
         >
           &lt;
         </button>
-
         <span className="text-2xl font-bold mx-4 font-sans">
-          {weekTitle()}
+          {currentWeek === 'thisWeek' ? '이번 주' : '저번 주'}
         </span>
-
         <button
           onClick={() => setWeek('thisWeek')}
           disabled={!isGoToThisWeekEnabled}
@@ -86,7 +112,7 @@ export default function LunchSection() {
       {/* 요일 및 날짜 선택 그룹 */}
       <div className="flex justify-center items-center mb-6 border-b border-gray-200 pb-4">
         {weekDates.map(({ dayKey, date, fullDate }) => {
-          const isToday = new Date().toDateString() === fullDate.toDateString();
+          const isToday = fullDate.toDateString() === new Date().toDateString()
           return (
             <button
               key={dayKey}
@@ -106,51 +132,41 @@ export default function LunchSection() {
                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full border-2 border-white"></div>
               )}
             </button>
-          );
+          )
         })}
       </div>
 
       {/* 선택된 요일의 메뉴 표시 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* 메뉴 A 카드 */}
-        <div
-          onClick={() => handleMenuSelect('A')}
-          className={`
-            flex flex-col items-center bg-gray-50 p-4 rounded-lg shadow-sm cursor-pointer
-            transition-all duration-200 ease-in-out
-            ${localSelectedMenuOption === 'A' ? 'border-2 border-orange-500 transform scale-102 shadow-lg' : 'border border-gray-100 hover:shadow-md'}
-          `}
-        >
-          <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full mb-3">
-             <BiBowlRice size={24} className="text-blue-600" />
-          </div>
-          <h3 className="text-xl font-semibold text-gray-800 mb-2 font-sans">메뉴 A</h3>
-          <ul className="text-gray-700 text-sm list-disc list-inside text-left w-full px-4 font-sans">
-            {currentDayMenu.menuA.map((item, index) => (
-              <li key={index} className="py-0.5">{item}</li>
-            ))}
-          </ul>
-        </div>
+        {(['A','B'] as const).map(opt => {
+          const idx   = opt === 'A' ? 0 : 1
+          const color = opt === 'A' ? 'blue' : 'green'
+          const menu  = menus[idx]
+          const items = menu?.foods.map(f => f.foodName) || []
+          const isSel = localVote === opt
 
-        {/* 메뉴 B 카드 */}
-        <div
-          onClick={() => handleMenuSelect('B')}
-          className={`
-            flex flex-col items-center bg-gray-50 p-4 rounded-lg shadow-sm cursor-pointer
-            transition-all duration-200 ease-in-out
-            ${localSelectedMenuOption === 'B' ? 'border-2 border-orange-500 transform scale-102 shadow-lg' : 'border border-gray-100 hover:shadow-md'}
-          `}
-        >
-          <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mb-3">
-            <BiBowlRice size={24} className="text-green-600" />
-          </div>
-          <h3 className="text-xl font-semibold text-gray-800 mb-2 font-sans">메뉴 B</h3>
-          <ul className="text-gray-700 text-sm list-disc list-inside text-left w-full px-4 font-sans">
-            {currentDayMenu.menuB.map((item, index) => (
-              <li key={index} className="py-0.5">{item}</li>
-            ))}
-          </ul>
-        </div>
+          return (
+            <div
+              key={opt}
+              onClick={() => handleSelect(opt)}
+              onDoubleClick={() => handleVote(opt)}
+              className={`cursor-pointer p-4 rounded-lg transition
+                ${isSel
+                  ? 'border-2 border-orange-500 bg-orange-100'
+                  : 'border border-gray-100 hover:shadow-md' }`}
+            >
+              <div className={`w-12 h-12 mb-3 bg-${color}-100 rounded-full flex items-center justify-center`}>
+                <BiBowlRice size={24} className={`text-${color}-600`} />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">메뉴 {opt}</h3>
+              <ul className="list-disc list-inside text-sm">
+                {items.length > 0
+                  ? items.map((name, i) => <li key={i} className="py-0.5">{name}</li>)
+                  : <li className="py-0.5 text-gray-400">메뉴 없음</li>}
+              </ul>
+            </div>
+          )
+        })}
       </div>
     </section>
   );

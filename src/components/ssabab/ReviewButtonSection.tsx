@@ -1,10 +1,22 @@
 'use client'
 
-import React from 'react';
-import Link from 'next/link'; // Next.js의 Link 컴포넌트 임포트
-import { MdOutlineRateReview } from 'react-icons/md'; // 아이콘 추가
+import React, { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { MdOutlineRateReview } from 'react-icons/md'
+import { useAuthStore } from '@/stores/useAuthStore'
 
 export default function ReviewButtonSection() {
+  const isAuthenticated = useAuthStore(s => s.isAuthenticated)
+  const [show, setShow] = useState(false)
+
+  useEffect(() => {
+    const hour = new Date().getHours()
+    // 로그인돼 있고, 12시(정오) 이후 ~ 23시 사이일 때만 보여줌
+    setShow(isAuthenticated && hour >= 12)
+  }, [isAuthenticated])
+
+  if (!show) return null
+
   return (
     <section className="bg-white rounded-lg shadow-md p-6 flex justify-center items-center font-sans">
       <Link
@@ -18,5 +30,5 @@ export default function ReviewButtonSection() {
         <span>오늘의 점심 평가하러 가기</span>
       </Link>
     </section>
-  );
+  )
 }
