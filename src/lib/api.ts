@@ -45,7 +45,7 @@ export const refreshAccessToken = () =>
 export const getMenu = (date: string) =>
   api.get<{ menus: Menu[] }>('/api/menu', { params: { date } })
 
-/** 메뉴 RUD */
+/** 메뉴 CUD */
 export interface SaveMenuPayload { date: string; foods: FoodInfo[] }
 export const postMenu = (body: SaveMenuPayload) =>
   api.post<Menu>('/api/menu', body)
