@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useAuth, useAuthStore } from '@/stores/useAuthStore'
 import { logout as apiLogout } from '@/lib/api'
 
