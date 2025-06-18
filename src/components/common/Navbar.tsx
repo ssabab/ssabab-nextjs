@@ -145,36 +145,24 @@ export default function Navbar() {
 
             {/* 4. 로그인/마이페이지 탭 */}
             {isAuthenticated ? (
-              <>
-                <Link
-                  href="/mypage"
-                  aria-label="마이페이지"
-                  className={`
-                    flex flex-col items-center justify-center
-                    relative pb-1
-                    group
-                    transition-transform duration-200 hover:scale-105
-                  `}
-                >
-                  <MdOutlinePersonOutline size={24} className="transition-transform duration-200 group-hover:scale-110" />
-                  <span className="mt-1 text-sm text-gray-800 font-medium">마이</span>
-                  <span className={`
-                    absolute bottom-0 left-0 h-[2px] bg-black
-                    transition-all duration-300 ease-out
-                    ${pathname === '/mypage' ? 'w-full' : 'w-0 group-hover:w-full'}
-                  `}></span>
-                </Link>
-
-                {/* **로그아웃 버튼** → onClick 으로 처리 */}
-                <button
-                  onClick={handleLogout}
-                  aria-label="로그아웃"
-                  className="flex flex-col items-center justify-center relative pb-1 group transition-transform duration-200 hover:scale-105"
-                >
-                  <MdLogout size={24} className="transition-transform duration-200 group-hover:scale-110" />
-                  <span className="mt-1 text-sm text-gray-800 font-medium">로그아웃</span>
-                </button>
-              </>
+              <Link
+                href="/my"
+                aria-label="마이페이지"
+                className={`
+                  flex flex-col items-center justify-center
+                  relative pb-1
+                  group
+                  transition-transform duration-200 hover:scale-105
+                `}
+              >
+                <MdOutlinePersonOutline size={24} className="transition-transform duration-200 group-hover:scale-110" />
+                <span className="mt-1 text-sm text-gray-800 font-medium">마이</span>
+                <span className={`
+                  absolute bottom-0 left-0 h-[2px] bg-black
+                  transition-all duration-300 ease-out
+                  ${pathname === '/my' ? 'w-full' : 'w-0 group-hover:w-full'}
+                `}></span>
+              </Link>
             ) : (
               <Link
                 href="/login"
