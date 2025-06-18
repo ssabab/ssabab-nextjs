@@ -21,11 +21,11 @@ const EMPTY_MENUS: Menu[] = [
 ]
 
 export default function AdminMenuPanel() {
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
   const [menus, setMenus] = useState<Menu[]>(EMPTY_MENUS)
   const [hasExisting, setHasExisting] = useState(false)
 
-  const formattedDate = format(selectedDate, "yyyy-MM-dd")
+  const formattedDate = selectedDate ? format(selectedDate, "yyyy-MM-dd") : ""
 
 
   useEffect(() => {
@@ -82,7 +82,7 @@ export default function AdminMenuPanel() {
           mode="single"
           selected={selectedDate}
           onSelect={setSelectedDate}
-          className="rounded-md border"
+          className="rounded-lg border"
         />
       </div>
 
