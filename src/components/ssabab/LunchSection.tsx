@@ -7,7 +7,6 @@ import { useAuthStore } from '@/stores/useAuthStore'
 import { Menu, getMenu, preVote } from '@/lib/api'
 
 export default function LunchSection() {
-  // 로그인한 사용자 인증 상태
   const isAuthenticated = useAuthStore(s => s.isAuthenticated)
 
   const {
@@ -22,7 +21,7 @@ export default function LunchSection() {
   } = useMenuStore()
 
   // 컴포넌트 로컬 상태
-  const [menus, setMenus]         = useState<Menu[]>([])
+  const [menus, setMenus] = useState<Menu[]>([])
   const [localVote, setLocalVote] = useState<'A'|'B'|null>(null)
 
   const todayKey = useMemo(() => {
@@ -31,7 +30,7 @@ export default function LunchSection() {
   }, [])
 
   // 투표 가능 여부 (00~12시)
-  const hour    = new Date().getHours()
+  const hour = new Date().getHours()
   const canVote = hour < 12
 
   // 마운트 시 스토어 초기화, 저장된 투표 로드
