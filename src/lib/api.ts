@@ -41,11 +41,10 @@ export const logout = () =>
 export const refreshAccessToken = () =>
   api.post<{ accessToken: string }>('/account/refresh')
 
-/** 날짜별 메뉴 조회 */
+/** 메뉴 CRUD */
 export const getMenu = (date: string) =>
   api.get<{ menus: Menu[] }>('/api/menu', { params: { date } })
 
-/** 메뉴 CUD */
 export interface SaveMenuPayload { date: string; foods: FoodInfo[] }
 export const postMenu = (body: SaveMenuPayload) =>
   api.post<Menu>('/api/menu', body)

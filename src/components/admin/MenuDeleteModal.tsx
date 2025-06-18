@@ -3,13 +3,12 @@
 import { Button } from "@/components/ui/button"
 import { useState } from "react"
 
-type Props = {
+interface Props {
   onDelete: () => void
 }
 
 export default function MenuDeleteModal({ onDelete }: Props) {
   const [open, setOpen] = useState(false)
-
   return (
     <div className="flex justify-end">
       <Button variant="destructive" onClick={() => setOpen(true)}>
