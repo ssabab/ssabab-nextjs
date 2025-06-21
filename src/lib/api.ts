@@ -110,19 +110,14 @@ export const logout = () =>
 // export const refreshAccessToken = () =>
 //   api.post<{ accessToken: string }>('/account/refresh')
 
-export const refreshAccessToken = () => {
-  const rt = getCookieValue('refreshToken')   // or localStorage.getItem('refreshToken')
-  return api.post<{ accessToken: string }>(
-    '/account/refresh',
-    { refreshToken: rt }                     // ★ 반드시 body에 담기
-  ).then(res => {
-    // ★ 새 토큰을 저장해주는 부분 추가
-    const newToken = res.data.accessToken  // JSON 구조가 { message, token:{accessToken,…} }
-    setCookie('accessToken', newToken)           // getCookieValue/ setCookie 유틸 활용
-    api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`
-    return newToken
-  })
-}
+export const refreshAccessToken = () =>
+  api.post<{ accessToken: string }>('/account/refresh')   // withCredentials: true 로 쿠키 전송
+    .then(res => {
+      const newToken = res.data.accessToken;
+      setCookie('accessToken', newToken);
+      api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+      return newToken;
+    });
 
 /** 메뉴 CRUD */
 export const getMenu = (date: string) =>

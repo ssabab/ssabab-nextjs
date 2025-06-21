@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState, useMemo } from 'react'
-import axios from 'axios'
+import api from '@/lib/api'
 import { useAuthStore } from '@/stores/useAuthStore'
 
 export default function FriendsSection() {
@@ -29,7 +29,7 @@ export default function FriendsSection() {
       try {
         if (isMorning) {
           // 사전 투표 결과
-          const res = await axios.get<{ votes: { votedMenuId: number }[] }>(
+          const res = await api.get<{ votes: { votedMenuId: number }[] }>(
             '/api/vote/friends',
             { params: { date: today } }
           )
@@ -40,7 +40,7 @@ export default function FriendsSection() {
           setDataByMenu(counts)
         } else {
           // 메뉴 평점 결과
-          const res = await axios.get<{
+          const res = await api.get<{
             reviews: { votedMenuId: number; averageMenuScore: number }[]
           }>(
             '/api/review/menu/friends',
