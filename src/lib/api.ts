@@ -24,8 +24,43 @@ export interface Menu {
 
 // Voting
 export interface PreVotePayload { menuId: number }
+
 export const preVote = (payload: PreVotePayload) =>
   api.post('/api/vote', payload)
+
+export const updatePreVote = (payload: PreVotePayload) =>
+  api.put('/api/vote', payload)
+
+// Review
+
+// 메뉴 한줄평 & 후회여부
+export interface MenuReviewPayload {
+  menuId:      number
+  menuRegret:  boolean
+  menuComment: string
+}
+
+export const postMenuReview = (payload: MenuReviewPayload) =>
+  api.post('/api/review/menu', payload)
+
+export const putMenuReview = (payload: MenuReviewPayload) =>
+  api.put('/api/review/menu', payload)
+
+// 음식 평점 (여러 개)
+export interface FoodReview {
+  foodId:    number
+  foodScore: number
+}
+export interface FoodReviewPayload {
+  menuId:  number
+  reviews: FoodReview[]
+}
+
+export const postFoodReview = (payload: FoodReviewPayload) =>
+  api.post('/api/review/food', payload)
+
+export const putFoodReview = (payload: FoodReviewPayload) =>
+  api.put('/api/review/food', payload)
 
 /** 로그인 수정 필요할 수도.. 구글만 구현 */
 export const getGoogleOAuthUrl = () =>
