@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import api, { refreshAccessToken, getMenu } from '@/lib/api'
+import api, { refreshAccessToken, getMenu, postMenuReview, postFoodReview } from '@/lib/api'
 import Confetti from 'react-confetti'
 import { FaStar, FaArrowLeft, FaRegSmileBeam, FaRegFrownOpen } from 'react-icons/fa'
 
@@ -23,9 +23,13 @@ export default function ReviewPage() {
 
   // ── 1. 로그인 상태 확인 ───────────────────────────────
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [ready, setReady] = useState(false)
   useEffect(() => {
     refreshAccessToken()
-      .then(() => setIsLoggedIn(true))
+      .then(() => {              // accessToken 쿠키/로컬스토리지 세팅 완료
+      setIsLoggedIn(true)
+      setReady(true)           // ★ 실제로 API 호출해도 되는 시점
+    })
       .catch(() => {
         alert('로그인 후 이용해주세요')
         router.push('/login')
@@ -148,16 +152,15 @@ export default function ReviewPage() {
   const executeSubmission = async () => {
     if (!todayMenu) return;
     const id = todayMenu.menuId;
-    const method = hasReviewedToday ? 'put' : 'post';
     try {
-      await api[method]('/api/review/food', {
+      await postFoodReview({
         menuId: id,
         reviews: Object.entries(itemRatings).map(([fid, score]) => ({
           foodId: +fid,
           foodScore: score,
         })),
       });
-      await api[method]('/api/review/menu', {
+      await postMenuReview({
         menuId: id,
         menuRegret: isSatisfied === false,
         menuComment: oneLineReview,

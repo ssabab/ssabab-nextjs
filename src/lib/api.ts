@@ -6,6 +6,23 @@ const api = axios.create({
   withCredentials: true,
 })
 
+function getCookieValue(name: string): string | null {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie
+    .split('; ')
+    .find(row => row.startsWith(`${name}=`));
+  return match ? match.split('=')[1] : null;
+}
+
+api.interceptors.request.use(config => {
+  const token = getCookieValue('accessToken')
+  if (token) {
+    config.headers = config.headers || {}
+    config.headers['Authorization'] = `Bearer ${token}`
+  }
+  return config
+})
+
 export interface RawFood {
   foodId: number
   foodName: string
@@ -40,11 +57,9 @@ export interface MenuReviewPayload {
   menuComment: string
 }
 
+// putMenuReview는 더 이상 쓰지 않으니 import/내보내기에서 제거
 export const postMenuReview = (payload: MenuReviewPayload) =>
   api.post('/api/review/menu', payload)
-
-export const putMenuReview = (payload: MenuReviewPayload) =>
-  api.put('/api/review/menu', payload)
 
 // 음식 평점 (여러 개)
 export interface FoodReview {
@@ -70,7 +85,9 @@ export const oauthLogin = (provider: 'google', code: string) =>
   api.post<{ accessToken: string; refreshToken: string }>('/auth/oauth2/callback', { provider, code })
 
 export const logout = () =>
-  api.post('/account/logout')
+  api.post('/logout', null, {
+    withCredentials: true,
+  })
 
 /** 토큰 재발급 */
 export const refreshAccessToken = () =>
