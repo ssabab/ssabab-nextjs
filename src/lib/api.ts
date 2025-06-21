@@ -14,6 +14,17 @@ function getCookieValue(name: string): string | null {
   return match ? match.split('=')[1] : null;
 }
 
+function setCookie(name: string, value: string, days = 7) {
+  if (typeof document === 'undefined') return
+  const expires = new Date(Date.now() + days * 24*60*60*1000).toUTCString()
+  document.cookie = `${name}=${value}; Path=/; SameSite=None; Secure; Expires=${expires}`
+}
+
+function removeCookie(name: string) {
+  if (typeof document === 'undefined') return
+  document.cookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT`
+}
+
 api.interceptors.request.use(config => {
   const token = getCookieValue('accessToken')
   if (token) {
@@ -22,6 +33,12 @@ api.interceptors.request.use(config => {
   }
   return config
 })
+
+// 위 코드는 Postman 상단 오른쪽에 Cookies 아이콘(🔑)을 클릭 -> accessToken 이라는 이름으로 JWT가 저장되어 있다고 가정
+// 만약 로컬스토리지에 저장하고 있다면
+// const token = typeof window !== 'undefined'
+//   ? localStorage.getItem('accessToken')
+//   : null;
 
 export interface RawFood {
   foodId: number
@@ -90,8 +107,22 @@ export const logout = () =>
   })
 
 /** 토큰 재발급 */
-export const refreshAccessToken = () =>
-  api.post<{ accessToken: string }>('/account/refresh')
+// export const refreshAccessToken = () =>
+//   api.post<{ accessToken: string }>('/account/refresh')
+
+export const refreshAccessToken = () => {
+  const rt = getCookieValue('refreshToken')   // or localStorage.getItem('refreshToken')
+  return api.post<{ accessToken: string }>(
+    '/account/refresh',
+    { refreshToken: rt }                     // ★ 반드시 body에 담기
+  ).then(res => {
+    // ★ 새 토큰을 저장해주는 부분 추가
+    const newToken = res.data.accessToken  // JSON 구조가 { message, token:{accessToken,…} }
+    setCookie('accessToken', newToken)           // getCookieValue/ setCookie 유틸 활용
+    api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`
+    return newToken
+  })
+}
 
 /** 메뉴 CRUD */
 export const getMenu = (date: string) =>
