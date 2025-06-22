@@ -51,6 +51,7 @@ export default function MenuEditForm({
         {
           date: menu.date,
           foods: menu.foods.map((food: any) => ({
+            foodId: food.foodId,
             foodName: food.foodName,
             mainSub: food.mainSub,
             category: food.category,
