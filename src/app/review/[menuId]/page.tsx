@@ -44,12 +44,13 @@ export default function ReviewPage() {
   useEffect(() => {
     getMenu(todayStr)
       .then(res => {
-        const found = res.data.menus.find(m => m.menuId === menuId)
+        const data = res.data as any
+        const menusArr = data.menus ?? [data.menu1, data.menu2]
+        const found = menusArr.find((m: any) => m.menuId === menuId)
         if (!found) {
           alert('해당 날짜의 리뷰는 불가능합니다')
           router.push(HOME)
         } else {
-          // assume Menu.foods is array of names
           setTodayMenu({ menuId: found.menuId, foods: found.foods })
         }
       })
@@ -203,18 +204,20 @@ export default function ReviewPage() {
           {/* 만족도 선택 카드 */}
           <div className="flex justify-around">
             <div onClick={() => setIsSatisfied(true)}
-              className={`flex flex-col items-center p-2 cursor-pointer ${isSatisfied
-                  ? 'border-2 border-orange-500 rounded'
-                  : 'border-2 border-transparent'
-                }`}>
+              className={`
+                flex flex-col items-center justify-center p-4 rounded-xl cursor-pointer
+                transition-all duration-300 border-2 w-full max-w-[150px]
+                ${isSatisfied === true ? 'border-orange-500 bg-red-100 shadow-lg' : 'border-gray-200 bg-white hover:shadow-md'}
+              `}>
               <FaRegSmileBeam size={32} className={isSatisfied ? 'text-orange-500' : 'text-gray-300'} />
               <span>만족</span>
             </div>
             <div onClick={() => setIsSatisfied(false)}
-              className={`flex flex-col items-center p-2 cursor-pointer ${isSatisfied
-                  ? 'border-2 border-orange-500 rounded'
-                  : 'border-2 border-transparent'
-                }`}>
+              className={`
+                flex flex-col items-center justify-center p-4 rounded-xl cursor-pointer
+                transition-all duration-300 border-2 w-full max-w-[150px]
+                ${isSatisfied === false ? 'border-orange-500 bg-gray-100 shadow-lg' : 'border-gray-200 bg-white hover:shadow-md'}
+              `}>
               <FaRegFrownOpen size={32} className={isSatisfied === false ? 'text-orange-500' : 'text-gray-300'} />
               <span>후회</span>
             </div>

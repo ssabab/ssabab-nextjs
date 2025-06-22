@@ -196,8 +196,8 @@ export default function LunchSection() {
         {(['A','B'] as const).map(opt => {
           const idx   = opt === 'A' ? 0 : 1
           const color = opt === 'A' ? 'blue' : 'green'
-          const menu  = menus[idx]
-          const items = menu?.foods.map(f => f.foodName) || []
+          const menu = menus?.[idx] ?? { foods: [] }
+          const items = menu.foods.map(f => f.foodName)
           const isSel = localVote === opt
           const isReviewed = reviewedMenu===opt
           const disabled   = !isViewingToday || (reviewedMenu !== null && reviewedMenu !== opt)
