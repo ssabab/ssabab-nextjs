@@ -1,182 +1,173 @@
-// 'use client'
+'use client'
 
-// import React, { useEffect, useState, useRef } from 'react'
-// import { useRouter, useParams } from 'next/navigation'
-// import api, { refreshAccessToken, getMenu, postMenuReview, postFoodReview } from '@/lib/api'
-// import Confetti from 'react-confetti'
-// import { FaStar, FaArrowLeft, FaRegSmileBeam, FaRegFrownOpen } from 'react-icons/fa'
+import React, { useEffect, useState, useRef } from 'react'
+import { useRouter, useParams } from 'next/navigation'
+// refreshAccessToken 추후에 사용
+import api, { getMenu, postMenuReview, postFoodReview } from '@/lib/api'
+import Confetti from 'react-confetti'
+import { FaStar, FaArrowLeft, FaRegSmileBeam, FaRegFrownOpen } from 'react-icons/fa'
 
-// const HOME = '/ssabab'
+const HOME = '/ssabab'
 
-// export default function ReviewPage() {
-//   const router = useRouter()
-//   const { menuId: rawId } = useParams()
-//   const menuId = Number(rawId)
-//   const todayStr = new Date().toISOString().split('T')[0]
+export default function ReviewPage() {
+  const router = useRouter()
+  const { menuId: rawId } = useParams()
+  const menuId = Number(rawId)
+  const todayStr = new Date().toISOString().split('T')[0]
 
-//   // 유효하지 않은 메뉴 아이디(오늘 아님, 아이디 존재안함) 접근 차단
-//   if (!rawId || isNaN(menuId)) {
-//     alert('해당 날짜의 리뷰는 불가능합니다')
-//     router.push(HOME)
-//     return null
-//   }
+  // 1. refreshToken 관련 인증 제약 부분 잠시 주석처리 (테스트용)
+  // const [isLoggedIn, setIsLoggedIn] = useState(false)
+  // const [ready, setReady] = useState(false)
+  // useEffect(() => {
+  //   refreshAccessToken()
+  //     .then(() => {
+  //       setIsLoggedIn(true)
+  //       setReady(true)
+  //     })
+  //     .catch(() => {
+  //       alert('로그인 후 이용해주세요')
+  //       router.push('/login')
+  //     })
+  // }, [router])
 
-//   // ── 1. 로그인 상태 확인 ───────────────────────────────
-//   const [isLoggedIn, setIsLoggedIn] = useState(false)
-//   const [ready, setReady] = useState(false)
-//   useEffect(() => {
-//     refreshAccessToken()
-//       .then(() => {              // accessToken 쿠키/로컬스토리지 세팅 완료
-//       setIsLoggedIn(true)
-//       setReady(true)           // ★ 실제로 API 호출해도 되는 시점
-//     })
-//       .catch(() => {
-//         alert('로그인 후 이용해주세요')
-//         router.push('/login')
-//       })
-//   }, [router])
+  // 2. 메뉴 정보 불러오기 (오늘자, menuId 기준으로)
+  const [todayMenu, setTodayMenu] = useState<{
+    menuId: number
+    foods: { foodId: number; foodName: string }[]
+  } | null>(null)
+  const [loading, setLoading] = useState(true)
 
-//   // ── 2. 오늘 메뉴 불러오기 ────────────────────────────────
-//   const [todayMenu, setTodayMenu] = useState<{
-//     menuId: number
-//     foods: { foodId: number; foodName: string }[]
-//   } | null>(null)
-//   useEffect(() => {
-//     getMenu(todayStr)
-//       .then(res => {
-//         const data = res.data as any
-//         const menusArr = data.menus ?? [data.menu1, data.menu2]
-//         const found = menusArr.find((m: any) => m.menuId === menuId)
-//         if (!found) {
-//           alert('해당 날짜의 리뷰는 불가능합니다')
-//           router.push(HOME)
-//         } else {
-//           setTodayMenu({ menuId: found.menuId, foods: found.foods })
-//         }
-//       })
-//       .catch(err => {
-//         console.error(err)
-//         alert('오늘 메뉴를 불러올 수 없습니다')
-//         router.push(HOME)
-//       })
-//   }, [todayStr, menuId, router])
+  useEffect(() => {
+    getMenu(todayStr)
+      .then(res => {
+        const data = res.data as any
+        const menusArr = data.menus ?? [data.menu1, data.menu2]
+        const found = menusArr.find((m: any) => m.menuId === menuId)
+        if (!found) {
+          alert('해당 날짜의 리뷰는 불가능합니다')
+          router.push(HOME)
+        } else {
+          setTodayMenu({ menuId: found.menuId, foods: found.foods })
+        }
+        setLoading(false)
+      })
+      .catch(err => {
+        console.error(err)
+        alert('오늘 메뉴를 불러올 수 없습니다')
+        router.push(HOME)
+        setLoading(false)
+      })
+  }, [todayStr, menuId, router])
 
-//   // ── 3️. 이미 리뷰했는지 체크 & 불가 메뉴 차단 ──────────────
-//   const [hasReviewedToday, setHasReviewedToday] = useState(false)
-//   useEffect(() => {
-//     if (!todayMenu) return
-//     api
-//       .get<{ reviewed: boolean; menuId?: number }>('/api/review/check', { params: { date: todayStr } })
-//       .then(res => {
-//         if (res.data.reviewed && res.data.menuId !== menuId) {
-//           alert('다른 메뉴의 리뷰를 등록하셨습니다')
-//           router.push(HOME)
-//         } else {
-//           setHasReviewedToday(!!res.data.reviewed)
-//         }
-//       })
-//       .catch(err => {
-//         console.error(err)
-//         setHasReviewedToday(false)
-//       })
-//   }, [todayMenu, todayStr, menuId, router])
 
-//   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
-//   useEffect(() => {
-//     const onResize = () => setWindowSize({ width: window.innerWidth, height: window.innerHeight });
-//     window.addEventListener('resize', onResize)
-//     onResize();
-//     return () => window.removeEventListener('resize', onResize)
-//   }, [])
+  // 3. 오늘 이미 리뷰를 작성했는지 확인 (다른 메뉴 접근 방지, 같은 메뉴는 초기화 안내)
+  const [hasReviewedToday, setHasReviewedToday] = useState(false)
+  const [reviewedMenuId, setReviewedMenuId] = useState<number|null>(null)
+  const [forceRewrite, setForceRewrite] = useState(false)
+  const [showRewriteConfirm, setShowRewriteConfirm] = useState(false)
+  useEffect(() => {
+    if (!todayMenu) return
+    api.get<{ reviewed: boolean; menuId?: number }>(
+      '/api/review/check', { params: { date: todayStr } }
+    ).then(res => {
+      if (res.data.reviewed) {
+        setHasReviewedToday(true)
+        setReviewedMenuId(res.data.menuId ?? null)
+        if (res.data.menuId !== menuId) {
+          // 이미 오늘 다른 메뉴 리뷰 작성함 → 접근 차단
+          alert('이미 다른 메뉴에 리뷰를 등록하셨습니다.')
+          router.push(HOME)
+        } else {
+          // 이미 오늘 같은 메뉴 리뷰 작성 → 재작성 여부 확인
+          setShowRewriteConfirm(true)
+        }
+      } else {
+        setHasReviewedToday(false)
+        setReviewedMenuId(null)
+      }
+    }).catch(err => {
+      console.error(err)
+      setHasReviewedToday(false)
+      setReviewedMenuId(null)
+    })
+  }, [todayMenu, todayStr, menuId, router])
 
-//   // ── 4️. 리뷰 내용 로드 (수정 모드) ─────────────────────────
-//   const [itemRatings, setItemRatings] = useState<Record<number, number>>({})
-//   const [isSatisfied, setIsSatisfied] = useState<boolean | null>(null)
-//   const [oneLineReview, setOneLineReview] = useState('')
-//   useEffect(() => {
-//     if (!todayMenu || !hasReviewedToday) return
-//     const id = todayMenu.menuId
-//     // 음식 평점 불러오기
-//     api
-//       .get<{ reviews: { foodId: number; foodScore: number }[] }>('/api/review/food', { params: { menuId: id } })
-//       .then(res => {
-//         const map: Record<number, number> = {};
-//         res.data.reviews.forEach(r => { map[r.foodId] = r.foodScore; });
-//         setItemRatings(map);
-//       })
-//       .catch(err => { console.error(err) })
-//     // 메뉴 한줄평 불러오기
-//     api
-//       .get<{ menuRegret: boolean; menuComment: string }>('/api/review/menu', { params: { menuId: id } })
-//       .then(res => {
-//         setIsSatisfied(!res.data.menuRegret);
-//         setOneLineReview(res.data.menuComment);
-//       })
-//       .catch(() => { });
-//   }, [todayMenu, hasReviewedToday])
+  // 3-1. 같은 메뉴 재작성: 기존 리뷰 내용 전부 초기화
+  useEffect(() => {
+    if (showRewriteConfirm && !forceRewrite) {
+      if (window.confirm('기존 리뷰가 초기화 됩니다. 재작성 하시겠어요?')) {
+        setForceRewrite(true)
+        setItemRatings({})
+        setIsSatisfied(null)
+        setOneLineReview('')
+      } else {
+        router.push(HOME)
+      }
+    }
+  }, [showRewriteConfirm, forceRewrite, router])
 
-//   const handleStarClick = (idx: number, rating: number) => {
-//     setItemRatings(prev => ({ ...prev, [idx]: rating }))
-//   }
+    // 4. 리뷰 작성 폼
+  const [itemRatings, setItemRatings] = useState<Record<number, number>>({})
+  const [isSatisfied, setIsSatisfied] = useState<boolean | null>(null)
+  const [oneLineReview, setOneLineReview] = useState('')
 
-//   const handleGoToSsabab = () => router.push(HOME)
-//   const handleGoToAnalysis = () => router.push('/analysis')
+  const handleStarClick = (idx: number, rating: number) => {
+    setItemRatings(prev => ({ ...prev, [idx]: rating }))
+  }
 
-//   // ── 5️. 폼 상태 & 모달 훅 ─────────────────────────────────
+  // ── 5️. 폼 상태 & 모달 훅 ─────────────────────────────────
 
-//   const [showCancelModal, setShowCancelModal] = useState(false);
-//   const [showConfirmModal, setShowConfirmModal] = useState(false);
-//   const [showSuccessModal, setShowSuccessModal] = useState(false);
-//   const [confirmMsg, setConfirmMsg] = useState('');
-//   const wrapperRef = useRef<HTMLDivElement>(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [confirmMsg, setConfirmMsg] = useState('');
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
-//   // 클릭 아웃사이드 시 취소모달
-//   const handleWrapperClick = (e: React.MouseEvent<HTMLDivElement>) => {
-//     if (e.target === wrapperRef.current) {
-//       setShowCancelModal(true)
-//     }
-//   };
+  // 클릭 아웃사이드 시 취소모달
+  const handleWrapperClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === wrapperRef.current) {
+      setShowCancelModal(true)
+    }
+  };
 
-//   // ── 6️. 제출 전 유효성 & 확인모달 ─────────────────────────
-//   const handleSubmitReview = () => {
-//     if (isSatisfied === null) return alert('만족도를 선택해주세요');
-//     const unrated = Object.values(itemRatings).some(v => v === 0);
-//     setConfirmMsg(
-//       unrated
-//         ? '별점이 0점인 음식이 있습니다. 제출하시겠습니까?'
-//         : '정말 제출하시겠습니까?'
-//     );
-//     setShowConfirmModal(true);
-//   }
+  // ── 6️. 제출 전 유효성 & 확인모달 ─────────────────────────
+  const handleSubmitReview = () => {
+    if (isSatisfied === null) return alert('만족도를 선택해주세요');
+    const unrated = Object.values(itemRatings).some(v => v === 0);
+    setConfirmMsg(
+      unrated
+        ? '별점이 0점인 음식이 있습니다. 제출하시겠습니까?'
+        : '정말 제출하시겠습니까?'
+    );
+    setShowConfirmModal(true);
+  }
 
-//   // ── 7️. 등록/수정 API 호출 ─────────────────────────────────
-//   const executeSubmission = async () => {
-//     if (!todayMenu) return;
-//     const id = todayMenu.menuId;
-//     try {
-//       await postFoodReview({
-//         menuId: id,
-//         reviews: Object.entries(itemRatings).map(([fid, score]) => ({
-//           foodId: +fid,
-//           foodScore: score,
-//         })),
-//       });
-//       await postMenuReview({
-//         menuId: id,
-//         menuRegret: isSatisfied === false,
-//         menuComment: oneLineReview,
-//       });
-//       setShowConfirmModal(false);
-//       setShowSuccessModal(true);
-//     } catch (err) {
-//       console.error(err)
-//       alert('리뷰 저장 중 오류가 발생했습니다')
-//     }
-//   }
+  // ── 7️. 등록/수정 API 호출 ─────────────────────────────────
+  const executeSubmission = async () => {
+    if (!todayMenu) return;
+    const id = todayMenu.menuId;
+    try {
+      await postFoodReview({
+        menuId: id,
+        reviews: Object.entries(itemRatings).map(([fid, score]) => ({
+          foodId: +fid,
+          foodScore: score,
+        })),
+      });
+      await postMenuReview({
+        menuId: id,
+        menuRegret: isSatisfied === false,
+        menuComment: oneLineReview,
+      });
+      setShowConfirmModal(false);
+      setShowSuccessModal(true);
+    } catch (err) {
+      console.error(err)
+      alert('리뷰 저장 중 오류가 발생했습니다')
+    }
+  }
 
-//   const cancel = () => setShowCancelModal(false)
-
-  
+  const cancel = () => setShowCancelModal(false)
 
 //   return (
 //     <main className="fixed inset-0 bg-black/10 flex items-center justify-center">
@@ -350,162 +341,20 @@
 // }
 
 
-'use client'
 
-import React, { useEffect, useState } from 'react'
-import { useRouter, useParams } from 'next/navigation'
-import api from '@/lib/api'
-import { postMenuReview, postFoodReview } from '@/lib/api'
-import Confetti from 'react-confetti'
-import { FaStar, FaArrowLeft, FaRegSmileBeam, FaRegFrownOpen } from 'react-icons/fa'
-
-const HOME = '/ssabab'
-
-export default function ReviewPage() {
-  const router = useRouter()
-  const { reviewId: rawId } = useParams()
-  const menuId = Number(rawId)
-
-  // 1. 인증/토큰 제약 해제 (테스트 모드)
-  useEffect(() => {
-    console.log('[Auth] 인증 제약 없음: 테스트 모드')
-  }, [])
-
-  // 2. 메뉴 정보 로드 (menuId 기반)
-  const [foods, setFoods] = useState<{ foodId: number; foodName: string }[]>([])
-  const [loadingMenu, setLoadingMenu] = useState(true)
-  useEffect(() => {
-    console.log('[Load] 메뉴 조회 by ID:', menuId)
-    api.get<{ menuId: number; foods: { foodId: number; foodName: string }[] }>(`/api/menu/${menuId}`)
-      .then(res => {
-        console.log('[Load] 메뉴 응답:', res.data)
-        setFoods(res.data.foods)
-        setLoadingMenu(false)
-      })
-      .catch(err => {
-        console.error('[Load] 메뉴 로드 실패:', err)
-        setLoadingMenu(false)
-        alert('메뉴를 불러오는 중 오류가 발생했습니다')
-        router.push(HOME)
-      })
-  }, [menuId, router])
-
-  // 3. 항상 새로 작성: 기존 리뷰 로드 로직 제거
-  const [itemRatings, setItemRatings] = useState<Record<number, number>>({})
-  const [isSatisfied, setIsSatisfied] = useState<boolean | null>(null)
-  const [comment, setComment] = useState('')
-
-  const handleStarClick = (fid: number, rating: number) => {
-    console.log('[UI] 별점 클릭:', fid, rating)
-    setItemRatings(prev => ({ ...prev, [fid]: rating }))
-  }
-
-  // 4. 리뷰 제출
-  const [showConfirm, setShowConfirm] = useState(false)
-  const [showSuccess, setShowSuccess] = useState(false)
-
-  const handleSubmit = () => {
-    if (isSatisfied === null) {
-      alert('만족도를 선택해주세요')
-      return
-    }
-    setShowConfirm(true)
-  }
-
-  const executeSubmission = async () => {
-    console.log('[Submit] 음식 리뷰 요청:', itemRatings)
-    await postFoodReview({ menuId, reviews: Object.entries(itemRatings).map(([fid, score]) => ({ foodId: +fid, foodScore: score })) })
-    console.log('[Submit] 메뉴 리뷰 요청:', { menuRegret: isSatisfied === false, menuComment: comment })
-    await postMenuReview({ menuId, menuRegret: isSatisfied === false, menuComment: comment })
-    setShowConfirm(false)
-    setShowSuccess(true)
-  }
-
+  // (리턴은 아래처럼 디버깅용 값만 보여주도록 임시 변경)
   return (
     <main className="fixed inset-0 bg-black/10 flex items-center justify-center">
-      <div className="relative bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
-        {/* 뒤로가기 */}
-        <button onClick={() => router.back()} className="absolute top-4 left-4 text-gray-500">
-          <FaArrowLeft size={20} />
-        </button>
-        <h2 className="text-xl font-bold text-center mb-4">메뉴 {menuId} 리뷰</h2>
-
-        {/* 만족도 선택 */}
-        <div className="flex justify-around mb-4">
-          <div onClick={() => setIsSatisfied(true)} className={`p-4 border-2 rounded-xl cursor-pointer ${isSatisfied ? 'border-orange-500 bg-orange-100' : 'border-gray-200'}`}>
-            <FaRegSmileBeam size={32} />
-            <div>만족</div>
-          </div>
-          <div onClick={() => setIsSatisfied(false)} className={`p-4 border-2 rounded-xl cursor-pointer ${isSatisfied === false ? 'border-orange-500 bg-orange-100' : 'border-gray-200'}`}>
-            <FaRegFrownOpen size={32} />
-            <div>후회</div>
-          </div>
-        </div>
-
-        {/* 음식별 별점 */}
-        <div className="mb-4 space-y-2">
-          <h5 className="font-semibold">음식별 별점</h5>
-          {foods.map(food => (
-            <div key={food.foodId} className="flex justify-between items-center">
-              <span>{food.foodName}</span>
-              <div className="flex">
-                {[1,2,3,4,5].map(star => (
-                  <FaStar
-                    key={star}
-                    size={20}
-                    className={`${star <= (itemRatings[food.foodId]||0) ? 'text-yellow-400' : 'text-gray-300'} cursor-pointer`}
-                    onClick={() => handleStarClick(food.foodId, star)}
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* 한 줄 평 */}
-        <textarea
-          rows={3}
-          placeholder="한 줄 평"
-          value={comment}
-          onChange={e => setComment(e.target.value)}
-          className="w-full border p-2 rounded-md mb-4"
-        />
-
-        {/* 제출 버튼 */}
-        <button onClick={handleSubmit} className="w-full bg-orange-500 text-white py-3 rounded-xl">
-          제출
-        </button>
+      <div>
+        <div>menuId: {menuId}</div>
+        <div>hasReviewedToday: {String(hasReviewedToday)}</div>
+        <div>reviewedMenuId: {String(reviewedMenuId)}</div>
+        <div>forceRewrite: {String(forceRewrite)}</div>
+        <div>showRewriteConfirm: {String(showRewriteConfirm)}</div>
+        <div>itemRatings: {JSON.stringify(itemRatings)}</div>
+        <div>isSatisfied: {String(isSatisfied)}</div>
+        <div>oneLineReview: {oneLineReview}</div>
       </div>
-
-      {/* 확인 모달 */}
-      {showConfirm && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg shadow-lg text-center">
-            <p>리뷰를 제출하시겠습니까?</p>
-            <div className="mt-4 flex justify-center space-x-4">
-              <button onClick={() => setShowConfirm(false)} className="px-4 py-2 border rounded">
-                취소
-              </button>
-              <button onClick={executeSubmission} className="px-4 py-2 bg-green-500 text-white rounded">
-                확인
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 성공 모달 */}
-      {showSuccess && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center">
-          <Confetti recycle={false} width={300} height={300} />
-          <div className="bg-white p-6 rounded-lg shadow-lg text-center">
-            <p className="mb-4">리뷰가 저장되었습니다!</p>
-            <button onClick={() => setShowSuccess(false)} className="px-4 py-2 bg-gray-200 rounded">
-              닫기
-            </button>
-          </div>
-        </div>
-      )}
     </main>
   )
 }
