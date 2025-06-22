@@ -16,11 +16,18 @@ export default function MenuEditForm({
   menus: any[]
 }) {
   const token = useAuthStore((state) => state.token)
-  const [editedMenus, setEditedMenus] = useState(menus)
+  const [editedMenus, setEditedMenus] = useState<any[]>([])
 
-  // 날짜 바뀔 때마다 메뉴 반영
+  // 날짜 바뀔 때마다 menus를 id 기반으로 정규화
   useEffect(() => {
-    setEditedMenus(menus)
+    const normalized = menus.map((menu) => ({
+      ...menu,
+      foods: menu.foods.map((food: any) => ({
+        ...food,
+        id: food.foodId, // ✅ DTO에 맞게 foodId → id
+      })),
+    }))
+    setEditedMenus(normalized)
   }, [menus])
 
   // 음식 수정 핸들러
@@ -32,26 +39,39 @@ export default function MenuEditForm({
           : {
               ...menu,
               foods: menu.foods.map((food: any) =>
-                food.foodId !== foodId ? food : { ...food, [field]: value }
+                food.id !== foodId ? food : { ...food, [field]: value }
               ),
             }
       )
     )
   }
 
+  // 메뉴 수정 API 호출
   const handleEdit = async (menu: any) => {
+    console.log(        {
+          date: menu.date,
+          foods: menu.foods.map((food: any) => ({
+            id: food.id,
+            foodName: food.foodName,
+            mainSub: food.mainSub,
+            category: food.category,
+            tag: food.tag,
+          })),
+        })
+
+
     if (!token) {
       alert("로그인이 필요합니다.")
       return
     }
 
     try {
-      const res = await axios.put(
+      await axios.put(
         `http://localhost:8080/api/menu/${menu.menuId}`,
         {
           date: menu.date,
           foods: menu.foods.map((food: any) => ({
-            foodId: food.foodId,
+            id: food.id,
             foodName: food.foodName,
             mainSub: food.mainSub,
             category: food.category,
@@ -66,7 +86,7 @@ export default function MenuEditForm({
         }
       )
 
-      alert("메뉴가 성공적으로 수정되었습니다.")
+      alert("메뉴 수정 성공")
     } catch (err: any) {
       console.error(err)
       alert("메뉴 수정 중 오류가 발생했습니다.")
@@ -82,7 +102,7 @@ export default function MenuEditForm({
           <h3 className="font-medium">메뉴 {menuIdx + 1}</h3>
           {menu.foods.map((food: any) => (
             <div
-              key={food.foodId}
+              key={food.id}
               className="grid grid-cols-4 gap-2 items-center"
             >
               <input
@@ -90,14 +110,14 @@ export default function MenuEditForm({
                 type="text"
                 value={food.foodName}
                 onChange={(e) =>
-                  updateFood(menu.menuId, food.foodId, "foodName", e.target.value)
+                  updateFood(menu.menuId, food.id, "foodName", e.target.value)
                 }
               />
               <select
                 className="border p-2 rounded bg-gray-100"
                 value={food.mainSub}
                 onChange={(e) =>
-                  updateFood(menu.menuId, food.foodId, "mainSub", e.target.value)
+                  updateFood(menu.menuId, food.id, "mainSub", e.target.value)
                 }
               >
                 {MAIN_SUB_OPTIONS.map((opt) => (
@@ -110,7 +130,7 @@ export default function MenuEditForm({
                 className="border p-2 rounded bg-gray-100"
                 value={food.category}
                 onChange={(e) =>
-                  updateFood(menu.menuId, food.foodId, "category", e.target.value)
+                  updateFood(menu.menuId, food.id, "category", e.target.value)
                 }
               >
                 {CATEGORY_OPTIONS.map((opt) => (
@@ -123,7 +143,7 @@ export default function MenuEditForm({
                 className="border p-2 rounded bg-gray-100"
                 value={food.tag}
                 onChange={(e) =>
-                  updateFood(menu.menuId, food.foodId, "tag", e.target.value)
+                  updateFood(menu.menuId, food.id, "tag", e.target.value)
                 }
               >
                 {TAG_OPTIONS.map((opt) => (

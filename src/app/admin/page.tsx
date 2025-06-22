@@ -19,28 +19,24 @@ export default function AdminPage() {
   const initializeAuth = useAuthStore((s) => s.initializeAuth)
 
   useEffect(() => {
-    // 토큰 먼저 초기화한 뒤 어드민 확인
     initializeAuth()
 
     const verifyAccess = async () => {
-      await new Promise((res) => setTimeout(res, 50)) // 약간의 지연으로 초기화 타이밍 보장
+      await new Promise((res) => setTimeout(res, 50))
       const latestToken = useAuthStore.getState().token
 
       if (!latestToken) {
         alert("로그인이 필요합니다.")
-        router.replace("/")
+        router.replace("/login")
         return
       }
 
       try {
         const response = await axios.get("http://localhost:8080/admin", {
-          headers: {
-            Authorization: `Bearer ${latestToken}`,
-          },
+          headers: { Authorization: `Bearer ${latestToken}` },
         })
 
-        const data = response.data
-        if (data.accessLevel !== "admin") {
+        if (response.data.accessLevel !== "admin") {
           alert("관리자 권한이 없습니다.")
           router.replace("/")
         } else {
@@ -82,7 +78,12 @@ export default function AdminPage() {
 
         <div className="flex-1">
           {shouldRenderEdit && <MenuEditForm date={selectedDate!} menus={menus} />}
-          {shouldRenderRegister && <MenuRegisterForm date={selectedDate!} />}
+          {shouldRenderRegister && (
+            <MenuRegisterForm
+              date={selectedDate!}
+              onSuccess={(newMenus) => setMenus(newMenus)}
+            />
+          )}
         </div>
       </div>
     </div>

@@ -19,7 +19,6 @@ type MenuInput = {
   foods: FoodInput[]
 }
 
-// 음식 1개 기본 생성
 const createInitialFood = (): FoodInput => ({
   foodName: "",
   mainSub: "주메뉴",
@@ -27,24 +26,27 @@ const createInitialFood = (): FoodInput => ({
   tag: "밥",
 })
 
-// 메뉴 1개 기본 생성 (음식 6개)
 const createInitialMenu = (): MenuInput => ({
   foods: Array.from({ length: 6 }, createInitialFood),
 })
 
-export default function MenuRegisterForm({ date }: { date: string | Date }) {
+export default function MenuRegisterForm({
+  date,
+  onSuccess,
+}: {
+  date: string | Date
+  onSuccess?: (menus: any[]) => void
+}) {
   const [menus, setMenus] = useState<MenuInput[]>([
     createInitialMenu(),
     createInitialMenu(),
   ])
   const token = useAuthStore((state) => state.token)
 
-  // ✅ 날짜가 바뀔 때 입력값 초기화
   useEffect(() => {
     setMenus([createInitialMenu(), createInitialMenu()])
   }, [date])
 
-  // 음식 속성 변경 핸들러
   const handleChange = (
     menuIndex: number,
     foodIndex: number,
@@ -65,7 +67,6 @@ export default function MenuRegisterForm({ date }: { date: string | Date }) {
     )
   }
 
-  // 등록 핸들러
   const handleRegister = async () => {
     if (!token) {
       alert("로그인이 필요합니다.")
@@ -89,8 +90,12 @@ export default function MenuRegisterForm({ date }: { date: string | Date }) {
 
       if (res.status === 201) {
         alert("메뉴 등록 성공")
-      } else {
-        throw new Error("등록 실패")
+
+        // 등록 후 새로 데이터 불러와서 상위로 전달
+        const menusRes = await axios.get(
+          `http://localhost:8080/api/menu?date=${formattedDate}`
+        )
+        if (onSuccess) onSuccess(menusRes.data)
       }
     } catch (err) {
       console.error(err)

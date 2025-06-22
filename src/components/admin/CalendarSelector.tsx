@@ -20,27 +20,7 @@ export default function CalendarSelector({
 
     try {
       const res = await axios.get(`http://localhost:8080/api/menu?date=${formatted}`)
-
-      const raw = res.data
-      const menus: any[] = []
-
-      if (raw.menu1) {
-        menus.push({
-          menuId: 1,
-          date: raw.date,
-          foods: raw.menu1.foods,
-        })
-      }
-
-      if (raw.menu2) {
-        menus.push({
-          menuId: 2,
-          date: raw.date,
-          foods: raw.menu2.foods,
-        })
-      }
-
-      onMenuCheckResult(formatted, menus)
+      onMenuCheckResult(formatted, res.data)
     } catch (err: any) {
       if (err.response?.status === 400 || err.response?.status === 404) {
         onMenuCheckResult(formatted, [])
