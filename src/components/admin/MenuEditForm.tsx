@@ -24,7 +24,7 @@ export default function MenuEditForm({
       ...menu,
       foods: menu.foods.map((food: any) => ({
         ...food,
-        id: food.foodId, // ✅ DTO에 맞게 foodId → id
+        id: food.foodId,
       })),
     }))
     setEditedMenus(normalized)
