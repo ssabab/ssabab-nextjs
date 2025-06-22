@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
+import { jwtDecode } from 'jwt-decode'   // npm install jwt-decode
 
 // ──────────── Types ─────────────────────────────────────────────────
 
@@ -14,6 +15,7 @@ interface AuthStoreState {
   user: User | null
   isLoading: boolean
   isAuthenticated: boolean
+  isAuthInitialized: boolean
 
   // 액션
   setToken: (token: string | null) => void
@@ -61,6 +63,7 @@ export const useAuthStore = create<AuthStoreState>()(
       user: null,
       isLoading: false,
       isAuthenticated: false,
+      isAuthInitialized: false,
 
       // 액션
       setToken: (token) => {
@@ -96,7 +99,7 @@ export const useAuthStore = create<AuthStoreState>()(
           user: null,
           isAuthenticated: false,
           isLoading: false
-        });
+        })
         removeCookie('accessToken')
       },
 
@@ -107,16 +110,25 @@ export const useAuthStore = create<AuthStoreState>()(
       initializeAuth: () => {
         const token = getCookieValue('accessToken')
         if (token) {
-          set({ 
-            token,
-            isAuthenticated: true
-          })
-        } else {
-          set({ 
-            token: null,
-            isAuthenticated: false
-          })
+          try {
+            const { exp } = jwtDecode<{ exp: number }>(token)
+            if (Date.now() < exp * 1000) {
+              set({ 
+                token,
+                isAuthenticated: true,
+                isAuthInitialized: true
+              })
+              return
+            }
+          } catch (error) {
+            console.error('Token decoding error:', error)
+          }
         }
+        set({ 
+          token: null,
+          isAuthenticated: false,
+          isAuthInitialized: true
+        })
       },
 
       checkAuthStatus: () => {
@@ -144,8 +156,9 @@ export const useAuth = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const token = useAuthStore((state) => state.token)
   const user = useAuthStore((state) => state.user)
+  const isAuthInitialized = useAuthStore((state) => state.isAuthInitialized)
   
-  return { isAuthenticated, token, user }
+  return { isAuthenticated, token, user, isAuthInitialized }
 };
 
 // token 존재 여부만 확인하는 hook

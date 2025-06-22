@@ -6,6 +6,40 @@ const api = axios.create({
   withCredentials: true,
 })
 
+function getCookieValue(name: string): string | null {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie
+    .split('; ')
+    .find(row => row.startsWith(`${name}=`));
+  return match ? match.split('=')[1] : null;
+}
+
+function setCookie(name: string, value: string, days = 7) {
+  if (typeof document === 'undefined') return
+  const expires = new Date(Date.now() + days * 24*60*60*1000).toUTCString()
+  document.cookie = `${name}=${value}; Path=/; SameSite=None; Secure; Expires=${expires}`
+}
+
+function removeCookie(name: string) {
+  if (typeof document === 'undefined') return
+  document.cookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT`
+}
+
+api.interceptors.request.use(config => {
+  const token = getCookieValue('accessToken')
+  if (token) {
+    config.headers = config.headers || {}
+    config.headers['Authorization'] = `Bearer ${token}`
+  }
+  return config
+})
+
+// 위 코드는 Postman 상단 오른쪽에 Cookies 아이콘(🔑)을 클릭 -> accessToken 이라는 이름으로 JWT가 저장되어 있다고 가정
+// 만약 로컬스토리지에 저장하고 있다면
+// const token = typeof window !== 'undefined'
+//   ? localStorage.getItem('accessToken')
+//   : null;
+
 export interface RawFood {
   foodId: number
   foodName: string
@@ -24,8 +58,41 @@ export interface Menu {
 
 // Voting
 export interface PreVotePayload { menuId: number }
+
 export const preVote = (payload: PreVotePayload) =>
   api.post('/api/vote', payload)
+
+export const updatePreVote = (payload: PreVotePayload) =>
+  api.put('/api/vote', payload)
+
+// Review
+
+// 메뉴 한줄평 & 후회여부
+export interface MenuReviewPayload {
+  menuId:      number
+  menuRegret:  boolean
+  menuComment: string
+}
+
+// putMenuReview는 더 이상 쓰지 않으니 import/내보내기에서 제거
+export const postMenuReview = (payload: MenuReviewPayload) =>
+  api.post('/api/review/menu', payload)
+
+// 음식 평점 (여러 개)
+export interface FoodReview {
+  foodId:    number
+  foodScore: number
+}
+export interface FoodReviewPayload {
+  menuId:  number
+  reviews: FoodReview[]
+}
+
+export const postFoodReview = (payload: FoodReviewPayload) =>
+  api.post('/api/review/food', payload)
+
+export const putFoodReview = (payload: FoodReviewPayload) =>
+  api.put('/api/review/food', payload)
 
 /** 로그인 수정 필요할 수도.. 구글만 구현 */
 export const getGoogleOAuthUrl = () =>
@@ -35,11 +102,22 @@ export const oauthLogin = (provider: 'google', code: string) =>
   api.post<{ accessToken: string; refreshToken: string }>('/auth/oauth2/callback', { provider, code })
 
 export const logout = () =>
-  api.post('/account/logout')
+  api.post('/logout', null, {
+    withCredentials: true,
+  })
 
 /** 토큰 재발급 */
+// export const refreshAccessToken = () =>
+//   api.post<{ accessToken: string }>('/account/refresh')
+
 export const refreshAccessToken = () =>
-  api.post<{ accessToken: string }>('/account/refresh')
+  api.post<{ accessToken: string }>('/account/refresh')   // withCredentials: true 로 쿠키 전송
+    .then(res => {
+      const newToken = res.data.accessToken;
+      setCookie('accessToken', newToken);
+      api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+      return newToken;
+    });
 
 /** 메뉴 CRUD */
 export const getMenu = (date: string) =>

@@ -8,7 +8,6 @@ import InsightSection from '@/components/ssabab/InsightSection'
 import FriendsSection from '@/components/ssabab/FriendsSection'
 import NoticeSection from '@/components/ssabab/NoticeSection'
 import SectionTitle from '@/components/common/SectionTitle'
-import ReviewButtonSection from '@/components/ssabab/ReviewButtonSection'
 
 export default function SsababPage() {
   const router = useRouter()
@@ -37,15 +36,12 @@ export default function SsababPage() {
           <div className="lg:col-span-8 min-w-0 space-y-6">
             <SectionTitle title="오늘의 점심, 어느 쪽이 더 기대되시나요?" />
             <LunchSection />
-            <ReviewButtonSection />
           </div>
-
           <aside className="lg:col-span-4 min-w-0 space-y-6">
             <InsightSection />
             <FriendsSection />
             <NoticeSection />
           </aside>
-
         </div>
       </div>
     </main>
