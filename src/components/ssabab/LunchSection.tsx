@@ -76,7 +76,7 @@ export default function LunchSection() {
   const current = weeklyMenus[selectedIdx]
   const menus = useMemo(() => (current ? [current.menu1, current.menu2] : []), [current])
   const isToday = current?.date === todayISO
-  const canVote = isToday && new Date().getHours() > 12
+  const canVote = isToday && new Date().getHours() < 12
 
   // 오늘만 동작
   const handleSelect = (opt: 'A' | 'B') => {
@@ -91,10 +91,10 @@ export default function LunchSection() {
     if (!isAuthenticated) return
     const idx = opt === 'A' ? 0 : 1
     const menu = menus[idx]
-    if (!menu) return
-    if (new Date().getHours() < 12) {
+  if (!menu) return
+  if (new Date().getHours() >= 12) {
       if (reviewedMenus[current.date] && reviewedMenus[current.date] !== opt) return
-      router.push(`/review/${menu.menuId}`)
+       router.push(`/review/${current.date}/${opt}`)
       return
     }
     localStorage.setItem(`lunchVote_${current.date}`, opt)

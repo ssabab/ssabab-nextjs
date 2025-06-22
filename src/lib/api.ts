@@ -74,6 +74,7 @@ export interface MenuReviewPayload {
   menuId:      number
   menuRegret:  boolean
   menuComment: string
+  menuScore:  number
 }
 
 // putMenuReview는 더 이상 쓰지 않으니 import/내보내기에서 제거
