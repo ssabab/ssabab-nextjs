@@ -136,7 +136,6 @@ const CACHE_KEY = 'weeklyMenusCache';
 
 export const getWeeklyMenuCached = async () => {
   if (weeklyMenuCache) {
-    // 이미 데이터가 캐시되어 있으면 즉시 반환 (프로미스 형태로)
     return { data: weeklyMenuCache };
   }
   if (typeof window !== 'undefined') {
@@ -184,5 +183,46 @@ export const updateMenu = (id: number, body: SaveMenuPayload) =>
 
 export const deleteMenu = (id: number) =>
   api.delete<void>(`/api/menu/${id}`)
+
+export interface PersonalAnalysisResponse {
+  ratingData: RatingDataDTO;
+  topRatedFoods: TopLowestRatedFoodsDTO[];
+  lowestRatedFoods: TopLowestRatedFoodsDTO[];
+  preferredCategories: PreferredCategoryDTO[];
+  preferredKeywordsForCloud: PreferredKeywordDTO[];
+  personalInsight: string;
+  comparisonData: ComparisonDataDTO;
+}
+
+export interface RatingDataDTO {
+  averageRating: number;
+  totalReviews: number;
+}
+
+export interface TopLowestRatedFoodsDTO {
+  name: string;
+  rating: number;
+  date: string;
+}
+
+export interface PreferredCategoryDTO {
+  name: string;
+  percentage: number;
+}
+
+export interface PreferredKeywordDTO {
+  value: string;
+  count: number;
+  color: string;
+}
+
+export interface ComparisonDataDTO {
+  myRating: number;
+  avgRatingCommunity: number;
+  mySpicyPreference: number;
+  avgSpicyCommunity: number;
+  myVarietySeeking: number;
+  avgVarietyCommunity: number;
+}
 
 export default api
