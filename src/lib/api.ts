@@ -130,7 +130,50 @@ export const getMenu = (date: string) =>
   api.get<{ menus: Menu[] }>('/api/menu', { params: { date } })
 
 // 주간 메뉴 조회 (GET /api/menu/weekly)
-export const getWeeklyMenu = () => api.get('/api/menu/weekly')
+let weeklyMenuCache: any = null; // 1회 호출 후 캐시됨
+let weeklyMenuCachePromise: Promise<any> | null = null;
+const CACHE_KEY = 'weeklyMenusCache';
+
+export const getWeeklyMenuCached = async () => {
+  if (weeklyMenuCache) {
+    // 이미 데이터가 캐시되어 있으면 즉시 반환 (프로미스 형태로)
+    return { data: weeklyMenuCache };
+  }
+  if (typeof window !== 'undefined') {
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) {
+      try {
+        weeklyMenuCache = JSON.parse(cached);
+        return { data: weeklyMenuCache };
+      } catch (e) {
+        // 파싱 실패 시 무시하고 네트워크로
+      }
+    }
+  }
+  if (weeklyMenuCachePromise) {
+    // 이미 요청 중이면 해당 프로미스 반환 (동시 중복방지)
+    return weeklyMenuCachePromise;
+  }
+  // 최초 네트워크 호출
+  weeklyMenuCachePromise = api.get('/api/menu/weekly').then(res => {
+    weeklyMenuCache = res.data;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(CACHE_KEY, JSON.stringify(res.data));
+    }
+    weeklyMenuCachePromise = null;
+    return res;
+  }).catch(e => {
+    weeklyMenuCachePromise = null;
+    throw e;
+  });
+  return weeklyMenuCachePromise;
+}
+
+// 필요시 수동 초기화 (예: 로그아웃/관리자 변경 시)
+export const clearWeeklyMenuCache = () => {
+  weeklyMenuCache = null;
+  weeklyMenuCachePromise = null;
+}
 
 export interface SaveMenuPayload { date: string; foods: FoodInfo[] }
 export const postMenu = (body: SaveMenuPayload) =>

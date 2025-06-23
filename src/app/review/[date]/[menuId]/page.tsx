@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { getMenu, getWeeklyMenu, postMenuReview, refreshAccessToken } from '@/lib/api'
+import { getMenu, postMenuReview, refreshAccessToken } from '@/lib/api'
 import Confetti from 'react-confetti'
 import { FaStar, FaArrowLeft, FaRegSmileBeam, FaRegFrownOpen } from 'react-icons/fa'
 
@@ -52,9 +52,9 @@ const StarRatingRow = React.memo(function StarRatingRow({ foodId, foodName, rati
 
 export default function ReviewPage() {
   const router = useRouter()
-  const params = useParams() as { date: string; menuType: 'A' | 'B' }
+  const params = useParams() as { date: string; menuId: string }
   const reviewDate = params.date
-  const menuType = params.menuType
+  const menuId = Number(params.menuId)
 
   // ------ 모든 Hook은 여기 선언 ------
   const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -71,7 +71,6 @@ export default function ReviewPage() {
   const [confirmMsg, setConfirmMsg] = useState('')
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
-
   // ---- KST 오늘 날짜/시간 계산 ----
   const todayISO = getKSTDateISO()
   const hour = getKSTHour()
@@ -95,30 +94,27 @@ export default function ReviewPage() {
 
   // 2. 해당 날짜/타입에 메뉴 데이터 매칭
   useEffect(() => {
-    if (!reviewDate || (menuType !== 'A' && menuType !== 'B')) {
+   if (!reviewDate || isNaN(menuId)) {
       alert('잘못된 접근입니다.')
       router.push(HOME)
       return
     }
     getMenu(reviewDate)
       .then(res => {
-        const menuRaw = menuType === 'A' ? res.data.menu1 : res.data.menu2
-        if (!menuRaw) {
+        const found = (res.data.menus ?? []).find((m: any) => Number(m.menuId) === menuId)
+        if (!found) {
           alert('해당 날짜의 메뉴가 없습니다.')
           router.push(HOME)
           return
         }
-        // menuId가 실제로 없다면, 날짜+타입 조합으로 임시값이라도 만들어 넣자
-        setMenuData({
-          ...menuRaw,
-          menuId: `${reviewDate}_${menuType}`,
-        })
+        setMenuData(found)
         setIsTodayMenu(reviewDate === todayISO)
       })
       .catch(() => {
         router.push(HOME)
       })
-  }, [reviewDate, menuType, router, todayISO])
+  }, [reviewDate, menuId, router, todayISO])
+
   // 3. 창 사이즈 감지 (Confetti용)
   useEffect(() => {
     const onResize = () => setWindowSize({ width: window.innerWidth, height: window.innerHeight })
@@ -176,7 +172,7 @@ export default function ReviewPage() {
         menuId: menuData.menuId,
         menuRegret: isSatisfied === false,
         menuComment: oneLineReview,
-        menuScore: Number(avgScore.toFixed(2)), // 필수!
+        menuScore: Number(avgScore.toFixed(2)),
       }
       console.log('최종 제출 payload:', reviewPayload)
       await postMenuReview(reviewPayload)

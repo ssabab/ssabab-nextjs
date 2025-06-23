@@ -4,7 +4,7 @@ import React, { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { BiBowlRice } from 'react-icons/bi'
 import { useAuthStore } from '@/stores/useAuthStore'
-import { getWeeklyMenu, WeeklyMenu } from '@/lib/api'
+import { getWeeklyMenuCached , WeeklyMenu } from '@/lib/api'
 
 const weekDays = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'] as const
 const dayKor = ['월', '화', '수', '목', '금']
@@ -22,27 +22,23 @@ export default function LunchSection() {
   const [weeklyMenus, setWeeklyMenus] = useState<WeeklyMenu[]>([])
   const [selectedIdx, setSelectedIdx] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [reviewedMenus, setReviewedMenus] = useState<{ [date: string]: 'A' | 'B' | null }>({})
-  const [localVote, setLocalVote] = useState<'A' | 'B' | null>(null)
+  const [reviewedMenus, setReviewedMenus] = useState<{ [date: string]: number | null }>({})
+  const [localVote, setLocalVote] = useState<number | null>(null)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const [todayISO, setTodayISO] = useState('')
 
+
+  // menuId 받아오면 => prevote 업데이트
   useEffect(() => {
     setTodayISO(getKSTDateISO())
   }, [])
 
 
   useEffect(() => {
-    let cacheMenus: WeeklyMenu[] = []
-    try {
-      const cache = localStorage.getItem(cacheKey)
-      if (cache) cacheMenus = JSON.parse(cache)
-    } catch {}
-    setWeeklyMenus(cacheMenus)
     setLoading(true)
-    getWeeklyMenu()
+    getWeeklyMenuCached()
       .then(res => {
-        setWeeklyMenus(res.data.weeklyMenus)
+        setWeeklyMenus(res.data.weeklyMenus);
         localStorage.setItem(cacheKey, JSON.stringify(res.data.weeklyMenus))
         const todayISO = new Date().toISOString().slice(0, 10)
         const todayIdx = res.data.weeklyMenus.findIndex(m => m.date === todayISO)
@@ -54,14 +50,14 @@ export default function LunchSection() {
 
   useEffect(() => {
     if (!isAuthenticated || !weeklyMenus.length || !todayISO) return
-    const obj: { [date: string]: 'A' | 'B' | null } = {}
+    const obj: { [date: string]: number | null } = {}
     weeklyMenus.forEach(menu => {
       const r = localStorage.getItem(`lunchReview_${menu.date}`)
-      obj[menu.date] = r === 'A' || r === 'B' ? r : null
+      obj[menu.date] = r ? Number(r) : null
     })
     setReviewedMenus(obj)
     const todayVote = localStorage.getItem(`lunchVote_${todayISO}`)
-    setLocalVote(todayVote === 'A' || todayVote === 'B' ? todayVote : null)
+    setLocalVote(todayVote ? Number(todayVote) : null)
   }, [isAuthenticated, weeklyMenus, todayISO])
 
   const handleWeekChange = (toThisWeek: boolean) => {
@@ -79,26 +75,25 @@ export default function LunchSection() {
   const canVote = isToday && new Date().getHours() < 12
 
   // 오늘만 동작
-  const handleSelect = (opt: 'A' | 'B') => {
+  const handleSelect = (menuId: number) => {
     if (!isToday) return
     if (!isAuthenticated) return
     if (!canVote && localVote === null) return
-    if (reviewedMenus[current.date] && reviewedMenus[current.date] !== opt) return
-    setLocalVote(opt)
+    if (reviewedMenus[current.date] && reviewedMenus[current.date] !== menuId) return
+    setLocalVote(menuId)
   }
-  const handleVoteOrReview = (opt: 'A' | 'B') => {
+  const handleVoteOrReview = (menuId: number) => {
     if (!isToday) return
     if (!isAuthenticated) return
-    const idx = opt === 'A' ? 0 : 1
-    const menu = menus[idx]
+    const menu = menus.find(m => m.menuId === menuId)
   if (!menu) return
   if (new Date().getHours() >= 12) {
-      if (reviewedMenus[current.date] && reviewedMenus[current.date] !== opt) return
-       router.push(`/review/${current.date}/${opt}`)
+      if (reviewedMenus[current.date] && reviewedMenus[current.date] !== menuId) return
+      router.push(`/review/${current.date}/${menuId}`)
       return
     }
-    localStorage.setItem(`lunchVote_${current.date}`, opt)
-    setLocalVote(opt)
+    localStorage.setItem(`lunchVote_${current.date}`, String(menuId))
+    setLocalVote(menuId)
     alert('투표 완료!')
   }
 
@@ -162,12 +157,12 @@ export default function LunchSection() {
         {weekDayButtons}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {(['A', 'B'] as const).map((opt, idx) => {
-          const menu = menus[idx]
-          const items = menu ? menu.foods.map(f => f.foodName) : []
-          // 오늘만 임팩트 및 활성화, 나머지는 모두 비활성화 & 강조 없음
-          const isSel = isToday && localVote === opt
-          const isReviewed = isToday && reviewedMenus[current?.date ?? ''] === opt
+        {menus.map((menu, idx) => {
+          if (!menu) return null
+          const menuId = menu.menuId
+          const items = menu.foods.map(f => f.foodName)
+          const isSel = isToday && localVote === menuId
+          const isReviewed = isToday && reviewedMenus[current?.date ?? ''] === menuId
           const disabled = !isToday
 
           const hoverCls = disabled ? '' : 'hover:shadow-md'
@@ -181,9 +176,9 @@ export default function LunchSection() {
 
           return (
             <div
-              key={opt}
-              onClick={() => !disabled && handleSelect(opt)}
-              onDoubleClick={() => !disabled && handleVoteOrReview(opt)}
+              key={menuId}
+              onClick={() => !disabled && handleSelect(menuId)}
+              onDoubleClick={() => !disabled && handleVoteOrReview(menuId)}
               className={`${wrapperCls} p-4 rounded-lg transition ${highlightCls} relative`}
               style={{ pointerEvents: disabled ? 'none' : 'auto' }}
             >
@@ -195,7 +190,7 @@ export default function LunchSection() {
               <div className={`w-12 h-12 mb-3 bg-${cardColors[idx]}-100 rounded-full flex items-center justify-center`}>
                 <BiBowlRice size={24} className={`text-${cardColors[idx]}-600`} />
               </div>
-              <h3 className="text-xl font-semibold mb-2">메뉴 {opt}</h3>
+              <h3 className="text-xl font-semibold mb-2">메뉴 {idx === 0 ? 'A' : 'B'}</h3>
               <ul className="list-disc list-inside text-sm">
                 {items.length > 0
                   ? items.map((name, i) => <li key={i} className="py-0.5">{name}</li>)
