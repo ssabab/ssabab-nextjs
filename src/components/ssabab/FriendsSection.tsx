@@ -4,22 +4,21 @@ import React, { useEffect, useState, useMemo } from 'react'
 import api from '@/lib/api'
 import { useAuthStore } from '@/stores/useAuthStore'
 
-export default function FriendsSection() {
-  // 로그인 여부
-  const isAuthenticated = useAuthStore(s => s.isAuthenticated)
+type FriendPreVote = {
+  friendId: number
+  friendName: string
+  votedMenuId: number
+  votedMenuInfo: { foodId: number; foodName: string }[]
+  votedMenuDate: string
+}
 
-  // 로딩 & 집계 결과 상태
+export default function FriendsSection() {
+  const isAuthenticated = useAuthStore(s => s.isAuthenticated)
   const [loading, setLoading] = useState(false)
   const [dataByMenu, setDataByMenu] = useState<Record<number, number>>({})
 
-  const today = useMemo(
-    () => new Date().toISOString().slice(0, 10),
-    []
-  )
-  const isMorning = useMemo(
-    () => new Date().getHours() < 12,
-    []
-  )
+  const today = useMemo(() => new Date().toISOString().slice(0, 10), [])
+  const isMorning = useMemo(() => new Date().getHours() < 12, [])
 
   useEffect(() => {
     if (!isAuthenticated) return
@@ -29,7 +28,7 @@ export default function FriendsSection() {
       try {
         if (isMorning) {
           // 사전 투표 결과
-          const res = await api.get<{ votes: { votedMenuId: number }[] }>(
+          const res = await api.get<{ votes: FriendPreVote[] }>(
             '/api/vote/friends',
             { params: { date: today } }
           )

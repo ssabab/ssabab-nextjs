@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/stores/useAuthStore'
 import LunchSection from '@/components/ssabab/LunchSection'
 import InsightSection from '@/components/ssabab/InsightSection'
-import FriendsSection from '@/components/ssabab/FriendsSection'
+import FriendsSection from '@/components/ssabab/newFriendsSection'
 import NoticeSection from '@/components/ssabab/NoticeSection'
 import SectionTitle from '@/components/common/SectionTitle'
 

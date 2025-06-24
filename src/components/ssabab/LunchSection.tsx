@@ -22,43 +22,77 @@ export default function LunchSection() {
   const [weeklyMenus, setWeeklyMenus] = useState<WeeklyMenu[]>([])
   const [selectedIdx, setSelectedIdx] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [reviewedMenus, setReviewedMenus] = useState<{ [date: string]: number | null }>({})
-  const [localVote, setLocalVote] = useState<number | null>(null)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const [todayISO, setTodayISO] = useState('')
-
+  const [todayReview, setTodayReview] = useState<number | null>(null)
+  const [todayVote, setTodayVote] = useState<number | null>(null)
 
   // menuId 받아오면 => prevote 업데이트
   useEffect(() => {
     setTodayISO(getKSTDateISO())
   }, [])
 
-
   useEffect(() => {
     setLoading(true)
+    const cached = localStorage.getItem(cacheKey)
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached)
+        setWeeklyMenus(parsed)
+        const todayISO = getKSTDateISO()
+        const todayIdx = parsed.findIndex((m: any) => m.date === todayISO)
+        setSelectedIdx(todayIdx !== -1 ? todayIdx : 5)
+        setLoading(false)
+      } catch {}
+    }
     getWeeklyMenuCached()
       .then(res => {
         setWeeklyMenus(res.data.weeklyMenus);
         localStorage.setItem(cacheKey, JSON.stringify(res.data.weeklyMenus))
-        const todayISO = new Date().toISOString().slice(0, 10)
-        const todayIdx = res.data.weeklyMenus.findIndex(m => m.date === todayISO)
+        const todayISO = getKSTDateISO()
+        const todayIdx = res.data.weeklyMenus.findIndex((m: any) => m.date === todayISO)
         setSelectedIdx(todayIdx !== -1 ? todayIdx : 5)
       })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
 
+  // 오늘 리뷰/투표 임시값 갱신 (오늘만 관리) 디버깅 해보기
   useEffect(() => {
-    if (!isAuthenticated || !weeklyMenus.length || !todayISO) return
-    const obj: { [date: string]: number | null } = {}
-    weeklyMenus.forEach(menu => {
-      const r = localStorage.getItem(`lunchReview_${menu.date}`)
-      obj[menu.date] = r ? Number(r) : null
-    })
-    setReviewedMenus(obj)
-    const todayVote = localStorage.getItem(`lunchVote_${todayISO}`)
-    setLocalVote(todayVote ? Number(todayVote) : null)
-  }, [isAuthenticated, weeklyMenus, todayISO])
+    if (!todayISO) return
+    // localStorage에서 오늘 리뷰/투표 정보 임시로만 관리
+    const r = localStorage.getItem(`lunchReview_${todayISO}`)
+    setTodayReview(r ? Number(r) : null)
+    const v = localStorage.getItem(`lunchVote_${todayISO}`)
+    setTodayVote(v ? Number(v) : null)
+    console.log('[투표값] todayVote:', v, 'todayReview:', r)
+  }, [todayISO])
+
+  // useEffect(() => {
+  //   if (!isAuthenticated) {
+  //     setTodayMenus([])
+  //     return
+  //   }
+  //   const todayISO = getKSTDateISO()
+  //   getMenu(todayISO)
+  //     .then(res => {
+  //       setTodayMenus([res.data.menu1, res.data.menu2]) // [{menuId, foods}]
+  //       console.log('[오늘 메뉴] todayMenus:', res.data.menu1, res.data.menu2)
+  //     })
+  //     .catch(() => setTodayMenus([]))
+  // }, [isAuthenticated])
+
+  // useEffect(() => {
+  //   if (!isAuthenticated || !weeklyMenus.length || !todayISO) return
+  //   const obj: { [date: string]: number | null } = {}
+  //   weeklyMenus.forEach(menu => {
+  //     const r = localStorage.getItem(`lunchReview_${menu.date}`)
+  //     obj[menu.date] = r ? Number(r) : null
+  //   })
+  //   setReviewedMenus(obj)
+  //   // const todayVote = localStorage.getItem(`lunchVote_${todayISO}`)
+  //   // setLocalVote(todayVote ? Number(todayVote) : null)
+  // }, [isAuthenticated, weeklyMenus, todayISO])
 
   const handleWeekChange = (toThisWeek: boolean) => {
     const offset = toThisWeek ? 5 : 0
@@ -68,33 +102,61 @@ export default function LunchSection() {
     const baseIdx = selectedIdx < 5 ? 0 : 5
     setSelectedIdx(baseIdx + dayIdx)
   }
-
+console.log('selectedIdx', selectedIdx, 'todayISO', todayISO, 'todayVote', todayVote, 'todayReview', todayReview, 'weeklyMenus', weeklyMenus) 
+  // 5. 렌더용 데이터
   const current = weeklyMenus[selectedIdx]
-  const menus = useMemo(() => (current ? [current.menu1, current.menu2] : []), [current])
   const isToday = current?.date === todayISO
-  const canVote = isToday && new Date().getHours() < 12
+
+  // 오늘/주간 모두 menuId 기준으로 안전하게 메뉴 렌더
+  const menus = useMemo(() => {
+    if (!current) return []
+    return [current.menu1, current.menu2].filter(Boolean)
+  }, [current])
+
+  // 6. 투표/리뷰 카드 액션
+  const canVote = isToday && isAuthenticated && new Date().getHours() < 12
 
   // 오늘만 동작
   const handleSelect = (menuId: number) => {
-    if (!isToday) return
-    if (!isAuthenticated) return
-    if (!canVote && localVote === null) return
-    if (reviewedMenus[current.date] && reviewedMenus[current.date] !== menuId) return
-    setLocalVote(menuId)
+    if (!isToday || !isAuthenticated) return
+    if (!canVote) return
+    if (todayVote && todayVote !== menuId) return
+    setTodayVote(menuId)
+    localStorage.setItem(`lunchVote_${todayISO}`, String(menuId))
+    console.log('[투표됨] menuId:', menuId)
   }
   const handleVoteOrReview = (menuId: number) => {
-    if (!isToday) return
-    if (!isAuthenticated) return
+    if (!isToday || !isAuthenticated) return
     const menu = menus.find(m => m.menuId === menuId)
-  if (!menu) return
-  if (new Date().getHours() >= 12) {
-      if (reviewedMenus[current.date] && reviewedMenus[current.date] !== menuId) return
+    console.log('handleVoteOrReview', menuId, 'menu', menu)
+    if (!menu) return
+    if (new Date().getHours() >= 12) {
+      if (todayReview && todayReview !== menuId) return
+      localStorage.setItem(`lunchReview_${todayISO}`, String(menuId))
+      setTodayReview(menuId)
+      console.log('[리뷰됨] menuId:', menuId)
       router.push(`/review/${current.date}/${menuId}`)
       return
     }
-    localStorage.setItem(`lunchVote_${current.date}`, String(menuId))
-    setLocalVote(menuId)
+    if (todayVote && todayVote !== menuId) return
+    setTodayVote(menuId)
+    localStorage.setItem(`lunchVote_${todayISO}`, String(menuId))
+    console.log('[투표됨] menuId:', menuId)
     alert('투표 완료!')
+  }
+
+  // 8. 카드 클래스 (임팩트)
+  const getCardClass = (menuId: number) => {
+    if (!isToday || !isAuthenticated) return 'border border-gray-100 hover:shadow-md'
+    if (todayReview !== null)
+      return todayReview === menuId
+        ? 'border-2 border-purple-500 bg-purple-100'
+        : 'border border-gray-100 hover:shadow-md'
+    if (todayVote !== null)
+      return todayVote === menuId
+        ? 'border-2 border-orange-500 bg-orange-100'
+        : 'border border-gray-100 hover:shadow-md'
+    return 'border border-gray-100 hover:shadow-md'
   }
 
   const infoMessage = useMemo(() => {
@@ -130,6 +192,11 @@ export default function LunchSection() {
     })
   }, [weeklyMenus, selectedIdx, todayISO, loading])
 
+  if (loading) return <div className="text-center py-20">식단 정보를 불러오는 중입니다...</div>
+  if (!weeklyMenus.length || selectedIdx >= weeklyMenus.length) {
+    return <div className="text-center py-20">이번 주 식단 정보가 없습니다.</div>
+  }
+
   return (
     <section className="bg-white rounded-lg shadow-md p-6 font-sans">
       {infoMessage && (
@@ -159,30 +226,20 @@ export default function LunchSection() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {menus.map((menu, idx) => {
           if (!menu) return null
+          const items = (menu.foods ?? []).map(f => f.foodName)
           const menuId = menu.menuId
-          const items = menu.foods.map(f => f.foodName)
-          const isSel = isToday && localVote === menuId
-          const isReviewed = isToday && reviewedMenus[current?.date ?? ''] === menuId
-          const disabled = !isToday
-
-          const hoverCls = disabled ? '' : 'hover:shadow-md'
-          const baseBorder = 'border border-gray-100'
-          const wrapperCls = disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-          const highlightCls = isReviewed
-            ? 'border-2 border-purple-500 bg-purple-100'
-            : isSel
-              ? 'border-2 border-orange-500 bg-orange-100'
-              : `${baseBorder} ${hoverCls}`
+          const cardClass = getCardClass(menuId)
+          const disabled = !isToday || !isAuthenticated
 
           return (
             <div
               key={menuId}
               onClick={() => !disabled && handleSelect(menuId)}
               onDoubleClick={() => !disabled && handleVoteOrReview(menuId)}
-              className={`${wrapperCls} p-4 rounded-lg transition ${highlightCls} relative`}
+              className={`cursor-pointer p-4 rounded-lg transition ${cardClass} relative`}
               style={{ pointerEvents: disabled ? 'none' : 'auto' }}
             >
-              {isReviewed && (
+              {isToday && todayReview === menuId && (
                 <span className="absolute top-2 right-2 bg-purple-500 text-white text-xs px-2 py-1 rounded">
                   리뷰되었습니다!
                 </span>
