@@ -51,12 +51,13 @@ export default function InsightSection() {
       <h3 className="text-lg font-semibold text-gray-800">오늘의 점심 추천 인사이트</h3>
       <div className="bg-blue-50 border border-blue-100 text-blue-800 rounded-md p-4 text-center">
         <p className="text-sm mb-2">
-          <span className="font-bold text-base">{currentRecommendation.menu}</span>
+          {/* <span className="font-bold text-base">{currentRecommendation.menu}</span>
           을(를) 추천합니다!
         </p>
         <p className="text-sm">
           <span className="font-medium text-blue-700">"{currentRecommendation.highlight}"</span>
-          {currentRecommendation.reason.replace(currentRecommendation.highlight, '')}
+          {currentRecommendation.reason.replace(currentRecommendation.highlight, '')} */}
+          <span className="font-bold text-base">투표와 리뷰가 모이면 추천이 가능해져요!</span>
         </p>
       </div>
     </section>

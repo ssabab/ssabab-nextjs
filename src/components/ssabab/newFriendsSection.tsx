@@ -32,6 +32,14 @@ export default function FriendsSection() {
   const today = useMemo(() => new Date().toISOString().slice(0, 10), [])
   const isMorning = useMemo(() => new Date().getHours() < 12, [])
 
+  const isVoteTime = isMorning
+
+  const menuIds = useMemo(() => {
+    return isVoteTime
+      ? Object.keys(dataByMenu).map(Number)
+      : Object.keys(reviewByMenu).map(Number)
+  }, [isVoteTime, dataByMenu, reviewByMenu])
+
   useEffect(() => {
     if (!isAuthenticated) return
     setLoading(true)
@@ -61,6 +69,7 @@ export default function FriendsSection() {
             '/api/review/menu/friends',
             { params: { date: today } }
           )
+          console.log('Friend reviews:', res.data.reviews)
           const byMenu: Record<number, { totalScore: number; count: number; menuFoods: string[]; friends: string[] }> = {}
           for (const r of res.data.reviews) {
             const id = r.votedMenuId
@@ -88,7 +97,6 @@ export default function FriendsSection() {
     return <section className="bg-white shadow rounded-lg p-6 font-sans text-center text-gray-400">로딩 중...</section>
   }
 
-  const menuIds = Object.keys(dataByMenu).map(Number)
   if (menuIds.length === 0) {
     return <section className="bg-white shadow rounded-lg p-6 font-sans text-center text-gray-500">아직 친구들 데이터가 없습니다.</section>
   }
@@ -101,25 +109,26 @@ export default function FriendsSection() {
       </h3>
 
       <div className="flex justify-around items-center py-4">
-        {menuIds.map(menuId => {
-          const { totalScore, count, menuFoods, friends } = reviewByMenu[menuId]
-          const avg = count > 0 ? (totalScore / count) : 0
-          return (
-            <div key={menuId} className="flex flex-col items-center w-40">
-              <span className="text-md font-bold text-gray-600 mb-1">{menuFoods.join(', ')}</span>
-              <span className="text-xl font-bold text-gray-700 mb-2">메뉴 {menuId % 2 === 1 ? "A" : "B"}</span>
-              <span className={`text-3xl font-extrabold mt-1 ${isMorning ? 'text-blue-600' : 'text-green-600'}`}>
-                {isMorning ? `${count}명` : `${avg.toFixed(1)}점`}
-              </span>
-              {/* 아침이면 친구명 나열 */}
-              {isMorning && (
-                <ul className="mt-2 text-xs text-gray-500 max-h-20 overflow-auto text-center">
-                {friends.map(friend => <li key={friend}>{friend}</li>)}
-                </ul>
-              )}
-            </div>
-          )
-        })}
+{menuIds.map(menuId => {
+  const menuData = isVoteTime ? dataByMenu[menuId] : reviewByMenu[menuId]
+  // vote면 count, names, menuFoods 사용
+  // review면 totalScore, count, menuFoods, friends 사용
+  const avg = !isVoteTime && menuData.count > 0 ? (menuData.totalScore / menuData.count) : 0
+
+  return (
+    <div key={menuId} className="flex flex-col items-center w-40">
+      <span className="text-xl font-bold text-gray-700 mb-2">메뉴 {menuId % 2 === 1 ? "A" : "B"}</span>
+      <span className={`text-3xl font-extrabold mt-1 ${isVoteTime ? 'text-blue-600' : 'text-green-600'}`}>
+        {isVoteTime ? `${menuData.count}명` : `${avg.toFixed(1)}점`}
+      </span>
+      {isVoteTime && (
+        <ul className="mt-2 text-xs text-gray-500 max-h-20 overflow-auto text-center">
+          {menuData.names.map(friend => <li key={friend}>{friend}</li>)}
+        </ul>
+      )}
+    </div>
+  )
+})}
       </div>
       {isMorning ? (
         <p className="text-center text-gray-500 text-sm">

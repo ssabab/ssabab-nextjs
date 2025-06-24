@@ -23,8 +23,6 @@ export default function SsababPage() {
     if (accessToken) {
       // useAuthStore를 사용해서 로그인 처리
       login(accessToken);
-      console.log('Access Token 저장됨:', accessToken);
-
       router.replace('/ssabab');
     }
   }, [router, login, initializeAuth]);

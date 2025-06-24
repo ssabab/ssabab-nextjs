@@ -1,17 +1,23 @@
-// src/components/analysis/PersonalAnalysis.tsx
 import React, { useEffect, useState } from 'react';
 import { usePersonalAnalysisStore } from '@/stores/usePersonalAnalysisStore'
+import api from '@/lib/api'
 
 export function PersonalAnalysis() {
   const { data, setData } = usePersonalAnalysisStore()
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('/api/analysis/personal', { credentials: 'include' })
-      .then((res) => res.json())
-      .then(setData)
-      .catch((err) => setError(err.message))
-
+    api.get('/api/analysis/personal')
+      .then(res => {
+        setData(res.data)
+      })
+      .catch(err => {
+        if (err.response) {
+          setError(`요청 실패: ${err.response.status} ${err.response.statusText}`)
+        } else {
+          setError(err.message)
+        }
+      })
   }, [setData])
   
   if (error) return <div>에러: {error}</div>
@@ -66,7 +72,7 @@ export function PersonalAnalysis() {
         <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
           <h3 className="text-xl font-semibold text-gray-800 mb-4">💯 가장 높게 평가한 음식 TOP 3</h3>
           <div className="space-y-4">
-            {data.topRatedFoods.map((food, index) => (
+            {(data.topRatedFoods ?? []).map((food, index) => (
               <div key={index} className="flex items-center space-x-4 border-b pb-3 last:border-b-0 last:pb-0">
                 <div>
                   <p className="font-semibold text-gray-700">{food.name}</p>
@@ -82,8 +88,8 @@ export function PersonalAnalysis() {
         <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
           <h3 className="text-xl font-semibold text-gray-800 mb-4">💔 가장 낮게 평가한 음식 TOP 3</h3>
           <div className="space-y-4">
-            {data.lowestRatedFoods.map((food, index) => (
-              <div key={index} className="flex items-center space-x-4 border-b pb-3 last:border-b-0 last:pb-0">
+            {(data.lowestRatedFoods ?? []).map((food, idx) => (
+              <div key={idx} className="flex items-center space-x-4 border-b pb-3 last:border-b-0 last:pb-0">
                 <div>
                   <p className="font-semibold text-gray-700">{food.name}</p>
                   <p className="text-sm text-red-500">{food.rating} ★</p>
@@ -132,7 +138,7 @@ export function PersonalAnalysis() {
               </svg>
             </div>
             <ul className="text-sm text-gray-700 space-y-2">
-              {data.preferredCategories.map((category, index) => (
+              {(data.preferredCategories ?? []).map((category, index) => (
                 <li key={index} className="flex items-center">
                   <span
                     className="inline-block w-3 h-3 rounded-full mr-2"
@@ -152,7 +158,7 @@ export function PersonalAnalysis() {
           {/* 커스텀 워드 클라우드 컨테이너 */}
           <div className="h-60 w-full flex items-center justify-center bg-gray-50 rounded-md border border-gray-200 p-2 overflow-hidden">
             <div className="flex flex-wrap justify-center items-center gap-2 max-w-full">
-              {data.preferredKeywordsForCloud.map((tag, index) => {
+              {(data.preferredKeywordsForCloud ?? []).map((tag, index) => {
                 const fontSize = tagCloudOptions.minSize + (tag.count / 10) * (tagCloudOptions.maxSize - tagCloudOptions.minSize);
                 return (
                   <span

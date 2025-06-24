@@ -4,7 +4,7 @@ import React, { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { BiBowlRice } from 'react-icons/bi'
 import { useAuthStore } from '@/stores/useAuthStore'
-import { getWeeklyMenuCached, WeeklyMenu } from '@/lib/api'
+import { getWeeklyMenuCached, WeeklyMenu, preVote, updatePreVote } from '@/lib/api'
 
 const weekDays = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'] as const
 const dayKor = ['월', '화', '수', '목', '금']
@@ -62,8 +62,6 @@ export default function LunchSection() {
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
-
-  console.log('weeklyMenus:', weeklyMenus)
 
   // 오늘 리뷰/투표 임시값 갱신 (오늘만 관리)
   useEffect(() => {
@@ -129,31 +127,30 @@ export default function LunchSection() {
     setSelectedIdx(baseIdx + dayIdx)
   }
 
-  // 투표 및 리뷰 가능 조건
-  const canVote = isToday && isAuthenticated && hour < 12
-  const canReview = isToday && isAuthenticated && hour >= 12 && hour < 23
-
-  // 투표 액션
-  const handleSelect = (menuId: number) => {
-    if (!canVote) return
-    if (todayVote && todayVote !== menuId) return
-    setTodayVote(menuId)
-    localStorage.setItem(`lunchVote_${todayISO}`, String(menuId))
-  }
-
   // 투표/리뷰 액션(더블클릭)
-  const handleVoteOrReview = (menu) => {
-    console.log('onDoubleClick', menu, isToday, isAuthenticated, hour);
+  const handleVoteOrReview = async (menu) => {
     if (!isToday || !isAuthenticated) return
     if (hour < 12) {
-      // 사전투표
-      if (todayVote && todayVote !== menu.menuId) return
-      setTodayVote(menu.menuId)
-      localStorage.setItem(`lunchVote_${todayISO}`, String(menu.menuId))
-      alert('투표 완료!')
+      if (todayVote && todayVote !== menu.menuId) {
+        // 이미 다른 메뉴에 투표했으면 수정(put)
+        await updatePreVote({ menuId: menu.menuId })
+        setTodayVote(menu.menuId)
+        localStorage.setItem(`lunchVote_${todayISO}`, String(menu.menuId))
+        alert('투표가 수정되었습니다!')
+      } else if (!todayVote) {
+        // 최초 투표(post)
+        await preVote({ menuId: menu.menuId })
+        setTodayVote(menu.menuId)
+        localStorage.setItem(`lunchVote_${todayISO}`, String(menu.menuId))
+        alert('투표 완료!')
+      }
       return
     }
     if (hour >= 12 && hour < 23) {
+      if (todayReview === menu.menuId) {
+        const ok = window.confirm('기존에 작성한 리뷰가 초기화 됩니다. 다시 작성하시겠습니까?')
+        if (!ok) return
+      }
       if (todayReview && todayReview !== menu.menuId) return
       localStorage.setItem(
         `reviewPage_menu_${current.date}_${menu.menuId}`,
@@ -180,6 +177,17 @@ export default function LunchSection() {
   }
 
   // 데이터 로딩/정상여부 체크 후 렌더
+
+  if (hour === 23) {
+    return (
+      <section className="bg-white rounded-lg shadow-md p-6 font-sans">
+        <div className="flex justify-center items-center">
+          데이터를 정리하고 있습니다! (23:00 ~ 00:59)
+        </div>
+      </section>
+    )
+  }
+
   if (loading || !weeklyMenus || weeklyMenus.length === 0) {
     return (
       <section className="flex flex-col justify-center items-center py-20">
@@ -227,7 +235,6 @@ export default function LunchSection() {
           const items = (menu.foods ?? []).map(f => f.foodName)
           const menuId = menu.menuId
           const cardClass = getCardClass(menuId)
-          console.log('isToday:', isToday, 'todayReview:', todayReview, 'todayVote:', todayVote)
           const disabled = !isToday || !isAuthenticated
 
           return (
