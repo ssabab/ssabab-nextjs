@@ -74,12 +74,13 @@ export interface MenuReviewPayload {
   menuId:      number
   menuRegret:  boolean
   menuComment: string
-  menuScore:  number
 }
 
-// putMenuReview는 더 이상 쓰지 않으니 import/내보내기에서 제거
 export const postMenuReview = (payload: MenuReviewPayload) =>
   api.post('/api/review/menu', payload)
+
+export const putMenuReview = (payload: MenuReviewPayload) =>
+  api.put('/api/review/menu', payload)
 
 // 음식 평점 (여러 개)
 export interface FoodReview {
@@ -87,15 +88,15 @@ export interface FoodReview {
   foodScore: number
 }
 export interface FoodReviewPayload {
-  menuId:  number
+  menuId: number
   reviews: FoodReview[]
 }
 
-// 음식 평점 등록/수정 (POST /api/review/food)
-export const postFoodReview = (body: {
-  menuId: number
-  reviews: { foodId: number; foodScore: number }[]
-}) => api.post('/api/review/food', body)
+export const postFoodReview = (payload: FoodReviewPayload) =>
+  api.post('/api/review/food', payload)
+
+export const putFoodReview = (body: FoodReviewPayload) =>
+  api.put('/api/review/food', body)
 
 // 로그아웃
 export const logout = () =>
@@ -127,7 +128,7 @@ export const getAdminPage = () => api.get('/admin')
 /** 메뉴 CRUD */
 // 일별 메뉴 조회
 export const getMenu = (date: string) =>
-  api.get<{ menus: Menu[] }>('/api/menu', { params: { date } })
+  api.get(`/api/menu?date=${date}`)
 
 // 주간 메뉴 조회 (GET /api/menu/weekly)
 let weeklyMenuCache: any = null; // 1회 호출 후 캐시됨
@@ -136,14 +137,14 @@ const CACHE_KEY = 'weeklyMenusCache';
 
 export const getWeeklyMenuCached = async () => {
   if (weeklyMenuCache) {
-    return { data: weeklyMenuCache };
+    return { data: { weeklyMenus: weeklyMenuCache } };
   }
   if (typeof window !== 'undefined') {
     const cached = localStorage.getItem(CACHE_KEY);
     if (cached) {
       try {
         weeklyMenuCache = JSON.parse(cached);
-        return { data: weeklyMenuCache };
+        return { data: { weeklyMenus: arr } }
       } catch (e) {
         // 파싱 실패 시 무시하고 네트워크로
       }
@@ -155,12 +156,14 @@ export const getWeeklyMenuCached = async () => {
   }
   // 최초 네트워크 호출
   weeklyMenuCachePromise = api.get('/api/menu/weekly').then(res => {
-    weeklyMenuCache = res.data;
+    // 배열만 저장!
+    const arr = Array.isArray(res.data.weeklyMenus) ? res.data.weeklyMenus : []
+    weeklyMenuCache = arr;
     if (typeof window !== 'undefined') {
-      localStorage.setItem(CACHE_KEY, JSON.stringify(res.data));
+      localStorage.setItem(CACHE_KEY, JSON.stringify(arr));
     }
     weeklyMenuCachePromise = null;
-    return res;
+    return { data: { weeklyMenus: arr } }
   }).catch(e => {
     weeklyMenuCachePromise = null;
     throw e;

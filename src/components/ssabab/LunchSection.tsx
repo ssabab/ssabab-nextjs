@@ -4,7 +4,7 @@ import React, { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { BiBowlRice } from 'react-icons/bi'
 import { useAuthStore } from '@/stores/useAuthStore'
-import { getWeeklyMenuCached , WeeklyMenu } from '@/lib/api'
+import { getWeeklyMenuCached, WeeklyMenu } from '@/lib/api'
 
 const weekDays = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'] as const
 const dayKor = ['월', '화', '수', '목', '금']
@@ -27,40 +27,47 @@ export default function LunchSection() {
   const [todayReview, setTodayReview] = useState<number | null>(null)
   const [todayVote, setTodayVote] = useState<number | null>(null)
 
-  // menuId 받아오면 => prevote 업데이트
+  const hour = new Date().getHours()
+
+  // 오늘 날짜 KST ISO
   useEffect(() => {
     setTodayISO(getKSTDateISO())
   }, [])
 
+  // 주간 메뉴 fetch + 캐시
   useEffect(() => {
     setLoading(true)
     const cached = localStorage.getItem(cacheKey)
     if (cached) {
       try {
         const parsed = JSON.parse(cached)
-        setWeeklyMenus(parsed)
-        const todayISO = getKSTDateISO()
-        const todayIdx = parsed.findIndex((m: any) => m.date === todayISO)
-        setSelectedIdx(todayIdx !== -1 ? todayIdx : 5)
-        setLoading(false)
+        if (Array.isArray(parsed)) {
+          setWeeklyMenus(parsed)
+          const todayISO = getKSTDateISO()
+          const todayIdx = parsed.findIndex((m: any) => m.date === todayISO)
+          setSelectedIdx(todayIdx !== -1 ? todayIdx : 5)
+        }
       } catch {}
+      setLoading(false)
     }
     getWeeklyMenuCached()
       .then(res => {
-        setWeeklyMenus(res.data.weeklyMenus);
-        localStorage.setItem(cacheKey, JSON.stringify(res.data.weeklyMenus))
+        const menus = Array.isArray(res.data.weeklyMenus) ? res.data.weeklyMenus : []
+        setWeeklyMenus(menus)
+        localStorage.setItem(cacheKey, JSON.stringify(menus))
         const todayISO = getKSTDateISO()
-        const todayIdx = res.data.weeklyMenus.findIndex((m: any) => m.date === todayISO)
+        const todayIdx = menus.findIndex((m: any) => m.date === todayISO)
         setSelectedIdx(todayIdx !== -1 ? todayIdx : 5)
       })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
 
-  // 오늘 리뷰/투표 임시값 갱신 (오늘만 관리) 디버깅 해보기
+  console.log('weeklyMenus:', weeklyMenus)
+
+  // 오늘 리뷰/투표 임시값 갱신 (오늘만 관리)
   useEffect(() => {
     if (!todayISO) return
-    // localStorage에서 오늘 리뷰/투표 정보 임시로만 관리
     const r = localStorage.getItem(`lunchReview_${todayISO}`)
     setTodayReview(r ? Number(r) : null)
     const v = localStorage.getItem(`lunchVote_${todayISO}`)
@@ -68,103 +75,23 @@ export default function LunchSection() {
     console.log('[투표값] todayVote:', v, 'todayReview:', r)
   }, [todayISO])
 
-  // useEffect(() => {
-  //   if (!isAuthenticated) {
-  //     setTodayMenus([])
-  //     return
-  //   }
-  //   const todayISO = getKSTDateISO()
-  //   getMenu(todayISO)
-  //     .then(res => {
-  //       setTodayMenus([res.data.menu1, res.data.menu2]) // [{menuId, foods}]
-  //       console.log('[오늘 메뉴] todayMenus:', res.data.menu1, res.data.menu2)
-  //     })
-  //     .catch(() => setTodayMenus([]))
-  // }, [isAuthenticated])
-
-  // useEffect(() => {
-  //   if (!isAuthenticated || !weeklyMenus.length || !todayISO) return
-  //   const obj: { [date: string]: number | null } = {}
-  //   weeklyMenus.forEach(menu => {
-  //     const r = localStorage.getItem(`lunchReview_${menu.date}`)
-  //     obj[menu.date] = r ? Number(r) : null
-  //   })
-  //   setReviewedMenus(obj)
-  //   // const todayVote = localStorage.getItem(`lunchVote_${todayISO}`)
-  //   // setLocalVote(todayVote ? Number(todayVote) : null)
-  // }, [isAuthenticated, weeklyMenus, todayISO])
-
-  const handleWeekChange = (toThisWeek: boolean) => {
-    const offset = toThisWeek ? 5 : 0
-    setSelectedIdx(offset + (selectedIdx % 5))
-  }
-  const handleDayChange = (dayIdx: number) => {
-    const baseIdx = selectedIdx < 5 ? 0 : 5
-    setSelectedIdx(baseIdx + dayIdx)
-  }
-console.log('selectedIdx', selectedIdx, 'todayISO', todayISO, 'todayVote', todayVote, 'todayReview', todayReview, 'weeklyMenus', weeklyMenus) 
-  // 5. 렌더용 데이터
   const current = weeklyMenus[selectedIdx]
   const isToday = current?.date === todayISO
 
-  // 오늘/주간 모두 menuId 기준으로 안전하게 메뉴 렌더
+  // 메뉴 리스트
   const menus = useMemo(() => {
     if (!current) return []
-    return [current.menu1, current.menu2].filter(Boolean)
+    return [current.menu1, current.menu2].filter(m => m && m.menuId)
   }, [current])
-
-  // 6. 투표/리뷰 카드 액션
-  const canVote = isToday && isAuthenticated && new Date().getHours() < 12
-
-  // 오늘만 동작
-  const handleSelect = (menuId: number) => {
-    if (!isToday || !isAuthenticated) return
-    if (!canVote) return
-    if (todayVote && todayVote !== menuId) return
-    setTodayVote(menuId)
-    localStorage.setItem(`lunchVote_${todayISO}`, String(menuId))
-    console.log('[투표됨] menuId:', menuId)
-  }
-  const handleVoteOrReview = (menuId: number) => {
-    if (!isToday || !isAuthenticated) return
-    const menu = menus.find(m => m.menuId === menuId)
-    console.log('handleVoteOrReview', menuId, 'menu', menu)
-    if (!menu) return
-    if (new Date().getHours() >= 12) {
-      if (todayReview && todayReview !== menuId) return
-      localStorage.setItem(`lunchReview_${todayISO}`, String(menuId))
-      setTodayReview(menuId)
-      console.log('[리뷰됨] menuId:', menuId)
-      router.push(`/review/${current.date}/${menuId}`)
-      return
-    }
-    if (todayVote && todayVote !== menuId) return
-    setTodayVote(menuId)
-    localStorage.setItem(`lunchVote_${todayISO}`, String(menuId))
-    console.log('[투표됨] menuId:', menuId)
-    alert('투표 완료!')
-  }
-
-  // 8. 카드 클래스 (임팩트)
-  const getCardClass = (menuId: number) => {
-    if (!isToday || !isAuthenticated) return 'border border-gray-100 hover:shadow-md'
-    if (todayReview !== null)
-      return todayReview === menuId
-        ? 'border-2 border-purple-500 bg-purple-100'
-        : 'border border-gray-100 hover:shadow-md'
-    if (todayVote !== null)
-      return todayVote === menuId
-        ? 'border-2 border-orange-500 bg-orange-100'
-        : 'border border-gray-100 hover:shadow-md'
-    return 'border border-gray-100 hover:shadow-md'
-  }
-
+  
+  // 안내 메시지
   const infoMessage = useMemo(() => {
-    if (isToday && new Date().getHours() < 12) return '더블 클릭하여 사전 투표에 참여해보세요!'
-    if (isToday && new Date().getHours() < 23) return '드신 메뉴를 클릭하여 리뷰를 남겨보세요!'
+    if (isToday && hour < 12) return '더블 클릭하여 사전 투표에 참여해보세요!'
+    if (isToday && hour < 23) return '드신 메뉴를 클릭하여 리뷰를 남겨보세요!'
     return null
-  }, [isToday])
+  }, [isToday, hour])
 
+  // 요일 버튼
   const weekDayButtons = useMemo(() => {
     const baseIdx = selectedIdx < 5 ? 0 : 5
     return weekDays.map((day, idx) => {
@@ -192,9 +119,80 @@ console.log('selectedIdx', selectedIdx, 'todayISO', todayISO, 'todayVote', today
     })
   }, [weeklyMenus, selectedIdx, todayISO, loading])
 
-  if (loading) return <div className="text-center py-20">식단 정보를 불러오는 중입니다...</div>
-  if (!weeklyMenus.length || selectedIdx >= weeklyMenus.length) {
-    return <div className="text-center py-20">이번 주 식단 정보가 없습니다.</div>
+  // 주차 이동, 요일 이동
+  const handleWeekChange = (toThisWeek: boolean) => {
+    const offset = toThisWeek ? 5 : 0
+    setSelectedIdx(offset + (selectedIdx % 5))
+  }
+  const handleDayChange = (dayIdx: number) => {
+    const baseIdx = selectedIdx < 5 ? 0 : 5
+    setSelectedIdx(baseIdx + dayIdx)
+  }
+
+  // 투표 및 리뷰 가능 조건
+  const canVote = isToday && isAuthenticated && hour < 12
+  const canReview = isToday && isAuthenticated && hour >= 12 && hour < 23
+
+  // 투표 액션
+  const handleSelect = (menuId: number) => {
+    if (!canVote) return
+    if (todayVote && todayVote !== menuId) return
+    setTodayVote(menuId)
+    localStorage.setItem(`lunchVote_${todayISO}`, String(menuId))
+  }
+
+  // 투표/리뷰 액션(더블클릭)
+  const handleVoteOrReview = (menu) => {
+    console.log('onDoubleClick', menu, isToday, isAuthenticated, hour);
+    if (!isToday || !isAuthenticated) return
+    if (hour < 12) {
+      // 사전투표
+      if (todayVote && todayVote !== menu.menuId) return
+      setTodayVote(menu.menuId)
+      localStorage.setItem(`lunchVote_${todayISO}`, String(menu.menuId))
+      alert('투표 완료!')
+      return
+    }
+    if (hour >= 12 && hour < 23) {
+      if (todayReview && todayReview !== menu.menuId) return
+      localStorage.setItem(
+        `reviewPage_menu_${current.date}_${menu.menuId}`,
+        JSON.stringify(menu)
+      );
+      localStorage.setItem(`lunchReview_${todayISO}`, String(menu.menuId))
+      setTodayReview(menu.menuId)
+      router.push(`/review/${current.date}/${menu.menuId}`)
+    }
+  }
+
+  // 카드 임팩트 클래스
+  const getCardClass = (menuId: number) => {
+    if (!isToday || !isAuthenticated) return 'border border-gray-100 hover:shadow-md'
+    if (todayReview !== null)
+      return todayReview === menuId
+        ? 'border-2 border-purple-500 bg-purple-100'
+        : 'border border-gray-100 hover:shadow-md'
+    if (todayVote !== null)
+      return todayVote === menuId
+        ? 'border-2 border-orange-500 bg-orange-100'
+        : 'border border-gray-100 hover:shadow-md'
+    return 'border border-gray-100 hover:shadow-md'
+  }
+
+  // 데이터 로딩/정상여부 체크 후 렌더
+  if (loading || !weeklyMenus || weeklyMenus.length === 0) {
+    return (
+      <section className="flex flex-col justify-center items-center py-20">
+        <div className="text-gray-500 text-lg font-medium mb-4">메뉴 정보를 불러오는 중...</div>
+      </section>
+    )
+  }
+  if (selectedIdx < 0 || selectedIdx >= weeklyMenus.length) {
+    return (
+      <section className="flex flex-col justify-center items-center py-20">
+        <div className="text-gray-500 text-lg font-medium mb-4">유효한 날짜의 메뉴가 없습니다.</div>
+      </section>
+    )
   }
 
   return (
@@ -229,13 +227,14 @@ console.log('selectedIdx', selectedIdx, 'todayISO', todayISO, 'todayVote', today
           const items = (menu.foods ?? []).map(f => f.foodName)
           const menuId = menu.menuId
           const cardClass = getCardClass(menuId)
+          console.log('isToday:', isToday, 'todayReview:', todayReview, 'todayVote:', todayVote)
           const disabled = !isToday || !isAuthenticated
 
           return (
             <div
               key={menuId}
               onClick={() => !disabled && handleSelect(menuId)}
-              onDoubleClick={() => !disabled && handleVoteOrReview(menuId)}
+              onDoubleClick={() => !disabled && handleVoteOrReview(menu)}
               className={`cursor-pointer p-4 rounded-lg transition ${cardClass} relative`}
               style={{ pointerEvents: disabled ? 'none' : 'auto' }}
             >

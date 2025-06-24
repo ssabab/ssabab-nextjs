@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { getMenu, postMenuReview, refreshAccessToken } from '@/lib/api'
+import { getMenu, postMenuReview, putMenuReview, postFoodReview, putFoodReview, refreshAccessToken } from '@/lib/api'
 import Confetti from 'react-confetti'
 import { FaStar, FaArrowLeft, FaRegSmileBeam, FaRegFrownOpen } from 'react-icons/fa'
 
@@ -16,9 +16,7 @@ function getKSTDate(date?: Date) {
 function getKSTDateISO(date?: Date) {
   return getKSTDate(date).toISOString().slice(0, 10)
 }
-function getKSTHour(date?: Date) {
-  return getKSTDate(date).getHours()
-}
+
 
 // 별점 행을 최적화(React.memo)하여, 음식별 별점만 리렌더
 interface StarRatingRowProps {
@@ -71,9 +69,11 @@ export default function ReviewPage() {
   const [confirmMsg, setConfirmMsg] = useState('')
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
+
   // ---- KST 오늘 날짜/시간 계산 ----
   const todayISO = getKSTDateISO()
-  const hour = getKSTHour()
+  const hour = new Date().getHours()
+
 
   // 1. 로그인 체크
   useEffect(() => {
@@ -92,16 +92,26 @@ export default function ReviewPage() {
     setIsAllowedTime(hour >= 12 && hour < 23)
   }, [router, hour])
 
-  // 2. 해당 날짜/타입에 메뉴 데이터 매칭
+  // 2. 메뉴 데이터 가져오기 (menuId로 menu1/menu2 중 하나 찾음)
   useEffect(() => {
-   if (!reviewDate || isNaN(menuId)) {
+    if (!reviewDate || isNaN(menuId)) {
       alert('잘못된 접근입니다.')
       router.push(HOME)
       return
     }
+    const localKey = `reviewPage_menu_${reviewDate}_${menuId}`
+    const localMenu = localStorage.getItem(localKey)
+    if (localMenu) {
+      setMenuData(JSON.parse(localMenu))
+      setIsTodayMenu(reviewDate === todayISO)
+      return
+    }
+    
     getMenu(reviewDate)
       .then(res => {
-        const found = (res.data.menus ?? []).find((m: any) => Number(m.menuId) === menuId)
+        // response: { menu1: {...}, menu2: {...} }
+        const menus = [res.data.menu1, res.data.menu2].filter(Boolean)
+        const found = menus.find((m: any) => Number(m.menuId) === menuId)
         if (!found) {
           alert('해당 날짜의 메뉴가 없습니다.')
           router.push(HOME)
@@ -153,40 +163,49 @@ export default function ReviewPage() {
     ))
   }, [menuData, itemRatings, handleStarClick])
 
-  // 6. 메뉴 리뷰 API 호출 (food 리뷰 POST 없음, 평균만 사용)
-  const executeSubmission = async () => {
-    try {
-      if (!menuData?.menuId) {
-        console.log(menuData)
-        alert('메뉴 정보가 없습니다.')
-        return
-      }
-      // 별점 평균 계산
-      const validScores = Object.values(itemRatings).filter(n => n > 0)
-      if (!validScores.length) {
-        alert('별점을 하나 이상 선택해주세요.')
-        return
-      }
-      const avgScore = validScores.reduce((a, b) => a + b, 0) / validScores.length
-      const reviewPayload = {
-        menuId: menuData.menuId,
-        menuRegret: isSatisfied === false,
-        menuComment: oneLineReview,
-        menuScore: Number(avgScore.toFixed(2)),
-      }
-      console.log('최종 제출 payload:', reviewPayload)
-      await postMenuReview(reviewPayload)
-      setShowConfirmModal(false)
-      setShowSuccessModal(true)
-    } catch (err: any) {
-      if (err?.response?.data) {
-        alert('리뷰 저장 중 오류: ' + JSON.stringify(err.response.data))
-      } else {
-        alert('리뷰 저장 중 알 수 없는 오류 발생')
-      }
-      console.error(err)
+  const makeFoodReviews = () => {
+    if (!menuData || !menuData.foods) return []
+    return menuData.foods.map((food: any) => ({
+      foodId: food.foodId,
+      score: itemRatings[food.foodId] || 0,
+    }))
+  }
+const executeSubmission = async () => {
+  const reviewsArr = makeFoodReviews();
+
+  const payloadFood = {
+    menuId: menuData.menuId,
+    reviews: reviewsArr,
+  };
+  const payloadMenu = {
+    menuId: menuData.menuId,
+    menuRegret: isSatisfied === false,
+    menuComment: oneLineReview,
+  };
+
+  try {
+    await postFoodReview(payloadFood)
+  } catch (err: any) {
+    if (err?.response?.status === 400) {
+      await putFoodReview(payloadFood)
+    } else {
+      throw err
     }
   }
+
+  try {
+    await postMenuReview(payloadMenu)
+  } catch (err: any) {
+    if (err?.response?.status === 400) {
+      await putMenuReview(payloadMenu)
+    } else {
+      throw err
+    }
+  }
+
+  setShowConfirmModal(false)
+  setShowSuccessModal(true)
+}
 
   const cancel = () => setShowCancelModal(false)
   const handleGoToSsabab = () => router.push(HOME)
@@ -200,7 +219,7 @@ export default function ReviewPage() {
   if (reviewDate !== todayISO) {
     return <div className="text-center py-20">오늘 메뉴만 리뷰할 수 있습니다.</div>
   }
-  if (!isAllowedTime) {
+  if (!(hour >= 12 && hour < 23)) {
     return (
       <main className="fixed inset-0 flex items-center justify-center bg-black/10">
         <div className="bg-white rounded-lg shadow-xl p-8 text-center max-w-md w-full">
