@@ -11,26 +11,26 @@ const TAG_OPTIONS = ["밥", "면", "국", "생선", "고기", "야채", "기타"
 export default function MenuEditForm({
   date,
   menus,
+  onDelete,
 }: {
   date: string
   menus: any[]
+  onDelete?: () => void
 }) {
   const token = useAuthStore((state) => state.token)
   const [editedMenus, setEditedMenus] = useState<any[]>([])
 
-  // 날짜 바뀔 때마다 menus를 id 기반으로 정규화
   useEffect(() => {
     const normalized = menus.map((menu) => ({
       ...menu,
       foods: menu.foods.map((food: any) => ({
         ...food,
-        id: food.foodId, // ✅ DTO에 맞게 foodId → id
+        id: food.foodId,
       })),
     }))
     setEditedMenus(normalized)
   }, [menus])
 
-  // 음식 수정 핸들러
   const updateFood = (menuId: number, foodId: number, field: string, value: string) => {
     setEditedMenus((prevMenus) =>
       prevMenus.map((menu) =>
@@ -46,20 +46,7 @@ export default function MenuEditForm({
     )
   }
 
-  // 메뉴 수정 API 호출
   const handleEdit = async (menu: any) => {
-    console.log(        {
-          date: menu.date,
-          foods: menu.foods.map((food: any) => ({
-            id: food.id,
-            foodName: food.foodName,
-            mainSub: food.mainSub,
-            category: food.category,
-            tag: food.tag,
-          })),
-        })
-
-
     if (!token) {
       alert("로그인이 필요합니다.")
       return
@@ -68,16 +55,12 @@ export default function MenuEditForm({
     try {
       await axios.put(
         `http://localhost:8080/api/menu/${menu.menuId}`,
-        {
-          date: menu.date,
-          foods: menu.foods.map((food: any) => ({
-            id: food.id,
-            foodName: food.foodName,
-            mainSub: food.mainSub,
-            category: food.category,
-            tag: food.tag,
-          })),
-        },
+        menu.foods.map((food: any) => ({
+          foodName: food.foodName,
+          mainSub: food.mainSub,
+          category: food.category,
+          tag: food.tag,
+        })),
         {
           headers: {
             "Content-Type": "application/json",
@@ -93,18 +76,45 @@ export default function MenuEditForm({
     }
   }
 
+  const handleDeleteAllMenus = async () => {
+    if (!token) {
+      alert("로그인이 필요합니다.")
+      return
+    }
+
+    if (!confirm(`${date}의 메뉴를 정말 삭제하시겠습니까?`)) return
+
+    try {
+      await axios.delete(`http://localhost:8080/api/menu/${date}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      alert("메뉴 삭제 성공")
+      setEditedMenus([])
+      if (onDelete) onDelete()
+    } catch (err: any) {
+      console.error(err)
+      alert("메뉴 삭제 중 오류가 발생했습니다.")
+    }
+  }
+
   return (
     <div className="border p-4 rounded-md space-y-6">
-      <h2>{date} 메뉴 수정</h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-semibold">{date} 메뉴 수정</h2>
+        <button
+          onClick={handleDeleteAllMenus}
+          className="px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition"
+        >
+          전체 삭제
+        </button>
+      </div>
 
       {editedMenus.map((menu, menuIdx) => (
         <div key={menu.menuId} className="space-y-2 pb-4">
           <h3 className="font-medium">메뉴 {menuIdx + 1}</h3>
           {menu.foods.map((food: any) => (
-            <div
-              key={food.id}
-              className="grid grid-cols-4 gap-2 items-center"
-            >
+            <div key={food.id} className="grid grid-cols-4 gap-2 items-center">
               <input
                 className="border p-2 rounded bg-gray-100"
                 type="text"
