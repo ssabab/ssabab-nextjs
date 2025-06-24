@@ -23,7 +23,7 @@ interface StarRatingRowProps {
   foodId: number
   foodName: string
   rating: number
-  onStarClick: (foodId: number, score: number) => void
+  onStarClick: (foodId: number, foodScore: number) => void
 }
 const StarRatingRow = React.memo(function StarRatingRow({ foodId, foodName, rating, onStarClick }: StarRatingRowProps) {
   const stars = useMemo(() => [1, 2, 3, 4, 5], [])
@@ -167,7 +167,7 @@ export default function ReviewPage() {
     if (!menuData || !menuData.foods) return []
     return menuData.foods.map((food: any) => ({
       foodId: food.foodId,
-      score: itemRatings[food.foodId] || 0,
+      foodScore: itemRatings[food.foodId] || 0,
     }))
   }
 const executeSubmission = async () => {
@@ -177,6 +177,7 @@ const executeSubmission = async () => {
     menuId: menuData.menuId,
     reviews: reviewsArr,
   };
+
   const payloadMenu = {
     menuId: menuData.menuId,
     menuRegret: isSatisfied === false,
@@ -184,28 +185,43 @@ const executeSubmission = async () => {
   };
 
   try {
-    await postFoodReview(payloadFood)
+    await postFoodReview(payloadFood);
   } catch (err: any) {
+    console.error("postFoodReview 실패", err?.response?.status, err?.response?.data);
     if (err?.response?.status === 400) {
-      await putFoodReview(payloadFood)
+      try {
+        await putFoodReview(payloadFood);
+        console.log("putFoodReview 성공 (대체)");
+      } catch (putErr) {
+        console.error("putFoodReview 실패", putErr);
+        throw putErr;
+      }
     } else {
-      throw err
+      throw err;
     }
   }
 
   try {
-    await postMenuReview(payloadMenu)
+    await postMenuReview(payloadMenu);
+    console.log("postMenuReview 성공");
   } catch (err: any) {
+    console.error("postMenuReview 실패", err?.response?.status, err?.response?.data);
     if (err?.response?.status === 400) {
-      await putMenuReview(payloadMenu)
+      try {
+        await putMenuReview(payloadMenu);
+        console.log("putMenuReview 성공 (대체)");
+      } catch (putErr) {
+        console.error("putMenuReview 실패", putErr);
+        throw putErr;
+      }
     } else {
-      throw err
+      throw err;
     }
   }
 
-  setShowConfirmModal(false)
-  setShowSuccessModal(true)
-}
+  setShowConfirmModal(false);
+  setShowSuccessModal(true);
+};
 
   const cancel = () => setShowCancelModal(false)
   const handleGoToSsabab = () => router.push(HOME)
