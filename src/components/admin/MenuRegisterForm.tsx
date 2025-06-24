@@ -105,7 +105,7 @@ export default function MenuRegisterForm({
 
   return (
     <div className="border p-4 rounded-md space-y-6">
-      <h2>{typeof date === "string" ? date : date.toLocaleDateString()} 메뉴 등록</h2>
+      <h2 className="text-lg font-semibold">{typeof date === "string" ? date : date.toLocaleDateString()} 메뉴 등록</h2>
       {menus.map((menu, menuIdx) => (
         <div key={menuIdx} className="space-y-2">
           <h3 className="font-medium">메뉴 {menuIdx + 1}</h3>

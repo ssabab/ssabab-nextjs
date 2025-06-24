@@ -77,7 +77,13 @@ export default function AdminPage() {
         </div>
 
         <div className="flex-1">
-          {shouldRenderEdit && <MenuEditForm date={selectedDate!} menus={menus} />}
+          {shouldRenderEdit && (
+            <MenuEditForm
+              date={selectedDate!}
+              menus={menus}
+              onDelete={() => setMenus([])}
+            />
+          )}
           {shouldRenderRegister && (
             <MenuRegisterForm
               date={selectedDate!}
