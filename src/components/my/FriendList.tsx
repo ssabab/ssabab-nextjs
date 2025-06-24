@@ -70,6 +70,28 @@ export default function FriendList() {
     }
   }
 
+  const handleDeleteFriend = async (friendId: number) => {
+    if (!window.confirm('정말 이 친구를 삭제하시겠습니까?')) return
+    try {
+      const res = await fetch(`http://localhost:8080/friends/${friendId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: 'include',
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setFriends(prev => prev.filter(f => f.userId !== friendId))
+      } else {
+        alert(data.error || '친구 삭제 실패')
+      }
+    } catch (err) {
+      alert('친구 삭제 중 오류 발생')
+      console.error(err)
+    }
+  }
+
   return (
     <div className="bg-white rounded-xl shadow p-4">
       <div className="flex justify-between items-center pb-2 border-b border-gray-200 mb-2">
@@ -118,7 +140,15 @@ export default function FriendList() {
         <>
           {friends.slice(0, visibleCount).map(friend => (
             <div key={friend.userId} className="text-sm text-gray-800 py-0.5">
-              {friend.ssafyYear}기 {friend.ssafyRegion} {friend.classNum}반 {friend.username}
+              <span>
+                {friend.ssafyYear}기 {friend.ssafyRegion} {friend.classNum}반 {friend.username}
+              </span>
+              <button
+                onClick={() => handleDeleteFriend(friend.userId)}
+                className="ml-2 px-2 py-0.5 text-xs rounded bg-red-100 text-red-600 hover:bg-red-200 transition"
+              >
+                삭제
+              </button>
             </div>
           ))}
 

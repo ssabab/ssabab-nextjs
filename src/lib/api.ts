@@ -1,18 +1,30 @@
 import axios from 'axios'
 
+export function getCookieValue(key: string): string | undefined {
+  if (typeof document === 'undefined') return
+  const match = document.cookie.match(new RegExp('(^| )' + key + '=([^;]+)'))
+  return match ? decodeURIComponent(match[2]) : undefined
+}
+
 const api = axios.create({
   baseURL: 'http://localhost:8080',
   headers: { 'Content-Type': 'application/json' },
   withCredentials: true,
 })
 
-function getCookieValue(name: string): string | null {
-  if (typeof document === 'undefined') return null;
-  const match = document.cookie
-    .split('; ')
-    .find(row => row.startsWith(`${name}=`));
-  return match ? match.split('=')[1] : null;
-}
+api.interceptors.request.use(config => {
+  const token = getCookieValue('accessToken')
+  if (token) {
+    config.headers = config.headers || {}
+    config.headers['Authorization'] = `Bearer ${token}`
+  }
+  const refreshToken = getCookieValue('refreshToken')
+  if (refreshToken) {
+    config.headers = config.headers || {}
+    config.headers['X-Refresh-Token'] = refreshToken
+  }
+  return config
+})
 
 function setCookie(name: string, value: string, days = 7) {
   if (typeof document === 'undefined') return
@@ -24,21 +36,6 @@ function removeCookie(name: string) {
   if (typeof document === 'undefined') return
   document.cookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT`
 }
-
-api.interceptors.request.use(config => {
-  const token = getCookieValue('accessToken')
-  if (token) {
-    config.headers = config.headers || {}
-    config.headers['Authorization'] = `Bearer ${token}`
-  }
-  return config
-})
-
-// 위 코드는 Postman 상단 오른쪽에 Cookies 아이콘(🔑)을 클릭 -> accessToken 이라는 이름으로 JWT가 저장되어 있다고 가정
-// 만약 로컬스토리지에 저장하고 있다면
-// const token = typeof window !== 'undefined'
-//   ? localStorage.getItem('accessToken')
-//   : null;
 
 export interface RawFood {
   foodId: number
@@ -52,8 +49,13 @@ export type FoodInfo = Pick<RawFood, 'foodId' | 'foodName'>
 
 export interface Menu {
   menuId: number
-  date?: string
   foods: FoodInfo[]
+}
+
+export interface WeeklyMenu {
+  date: string
+  menu1: Menu
+  menu2: Menu
 }
 
 // Voting
@@ -72,6 +74,7 @@ export interface MenuReviewPayload {
   menuId:      number
   menuRegret:  boolean
   menuComment: string
+  menuScore:  number
 }
 
 // putMenuReview는 더 이상 쓰지 않으니 import/내보내기에서 제거
@@ -88,40 +91,88 @@ export interface FoodReviewPayload {
   reviews: FoodReview[]
 }
 
-export const postFoodReview = (payload: FoodReviewPayload) =>
-  api.post('/api/review/food', payload)
+// 음식 평점 등록/수정 (POST /api/review/food)
+export const postFoodReview = (body: {
+  menuId: number
+  reviews: { foodId: number; foodScore: number }[]
+}) => api.post('/api/review/food', body)
 
-export const putFoodReview = (payload: FoodReviewPayload) =>
-  api.put('/api/review/food', payload)
-
-/** 로그인 수정 필요할 수도.. 구글만 구현 */
-export const getGoogleOAuthUrl = () =>
-  api.get<{ url: string }>('/auth/oauth2/authorize/google')
-
-export const oauthLogin = (provider: 'google', code: string) =>
-  api.post<{ accessToken: string; refreshToken: string }>('/auth/oauth2/callback', { provider, code })
-
+// 로그아웃
 export const logout = () =>
   api.post('/logout', null, {
     withCredentials: true,
   })
 
 /** 토큰 재발급 */
-// export const refreshAccessToken = () =>
-//   api.post<{ accessToken: string }>('/account/refresh')
+export const refreshAccessToken = async () => {
+  const refreshToken = getCookieValue('refreshToken')
+  if (!refreshToken) throw new Error('No refresh token')
+  const { data } = await api.post('/account/refresh', { refreshToken })
+  // 받은 토큰을 쿠키와 상태에 반영
+  setCookie('accessToken', data.token.accessToken)
+  setCookie('refreshToken', data.token.refreshToken)
+  return data.token
+}
 
-export const refreshAccessToken = () =>
-  api.post<{ accessToken: string }>('/account/refresh')   // withCredentials: true 로 쿠키 전송
-    .then(res => {
-      const newToken = res.data.accessToken;
-      setCookie('accessToken', newToken);
-      api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
-      return newToken;
-    });
+/** 홈/관리자 페이지 */
+// 홈 메시지 (GET /)
+export const getHome = () => api.get('/')
+
+// 분석 페이지 (GET /analysis)
+export const getAnalysis = () => api.get('/analysis')
+
+// 관리자 페이지 (GET /admin)
+export const getAdminPage = () => api.get('/admin')
 
 /** 메뉴 CRUD */
+// 일별 메뉴 조회
 export const getMenu = (date: string) =>
   api.get<{ menus: Menu[] }>('/api/menu', { params: { date } })
+
+// 주간 메뉴 조회 (GET /api/menu/weekly)
+let weeklyMenuCache: any = null; // 1회 호출 후 캐시됨
+let weeklyMenuCachePromise: Promise<any> | null = null;
+const CACHE_KEY = 'weeklyMenusCache';
+
+export const getWeeklyMenuCached = async () => {
+  if (weeklyMenuCache) {
+    return { data: weeklyMenuCache };
+  }
+  if (typeof window !== 'undefined') {
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) {
+      try {
+        weeklyMenuCache = JSON.parse(cached);
+        return { data: weeklyMenuCache };
+      } catch (e) {
+        // 파싱 실패 시 무시하고 네트워크로
+      }
+    }
+  }
+  if (weeklyMenuCachePromise) {
+    // 이미 요청 중이면 해당 프로미스 반환 (동시 중복방지)
+    return weeklyMenuCachePromise;
+  }
+  // 최초 네트워크 호출
+  weeklyMenuCachePromise = api.get('/api/menu/weekly').then(res => {
+    weeklyMenuCache = res.data;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(CACHE_KEY, JSON.stringify(res.data));
+    }
+    weeklyMenuCachePromise = null;
+    return res;
+  }).catch(e => {
+    weeklyMenuCachePromise = null;
+    throw e;
+  });
+  return weeklyMenuCachePromise;
+}
+
+// 필요시 수동 초기화 (예: 로그아웃/관리자 변경 시)
+export const clearWeeklyMenuCache = () => {
+  weeklyMenuCache = null;
+  weeklyMenuCachePromise = null;
+}
 
 export interface SaveMenuPayload { date: string; foods: FoodInfo[] }
 export const postMenu = (body: SaveMenuPayload) =>
@@ -132,5 +183,46 @@ export const updateMenu = (id: number, body: SaveMenuPayload) =>
 
 export const deleteMenu = (id: number) =>
   api.delete<void>(`/api/menu/${id}`)
+
+export interface PersonalAnalysisResponse {
+  ratingData: RatingDataDTO;
+  topRatedFoods: TopLowestRatedFoodsDTO[];
+  lowestRatedFoods: TopLowestRatedFoodsDTO[];
+  preferredCategories: PreferredCategoryDTO[];
+  preferredKeywordsForCloud: PreferredKeywordDTO[];
+  personalInsight: string;
+  comparisonData: ComparisonDataDTO;
+}
+
+export interface RatingDataDTO {
+  averageRating: number;
+  totalReviews: number;
+}
+
+export interface TopLowestRatedFoodsDTO {
+  name: string;
+  rating: number;
+  date: string;
+}
+
+export interface PreferredCategoryDTO {
+  name: string;
+  percentage: number;
+}
+
+export interface PreferredKeywordDTO {
+  value: string;
+  count: number;
+  color: string;
+}
+
+export interface ComparisonDataDTO {
+  myRating: number;
+  avgRatingCommunity: number;
+  mySpicyPreference: number;
+  avgSpicyCommunity: number;
+  myVarietySeeking: number;
+  avgVarietyCommunity: number;
+}
 
 export default api

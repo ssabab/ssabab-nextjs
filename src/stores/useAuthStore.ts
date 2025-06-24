@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
 import { jwtDecode } from 'jwt-decode'   // npm install jwt-decode
+import { refreshAccessToken } from '@/lib/api'
+
 
 // ──────────── Types ─────────────────────────────────────────────────
 
@@ -12,6 +14,7 @@ interface User {
 interface AuthStoreState {
   clearAuth: () => void
   token: string | null
+  refreshToken: string | null
   user: User | null
   isLoading: boolean
   isAuthenticated: boolean
@@ -19,6 +22,8 @@ interface AuthStoreState {
 
   // 액션
   setToken: (token: string | null) => void
+  setRefreshToken: (token: string) => void
+  clearRefreshToken: () => void
   setUser: (user: User | null) => void
   setLoading: (loading: boolean) => void
   login: (token: string, user?: User) => void
@@ -64,6 +69,7 @@ export const useAuthStore = create<AuthStoreState>()(
       isLoading: false,
       isAuthenticated: false,
       isAuthInitialized: false,
+      refreshToken: null,
 
       // 액션
       setToken: (token) => {
@@ -78,6 +84,8 @@ export const useAuthStore = create<AuthStoreState>()(
           removeCookie('accessToken')
         }
       },
+      setRefreshToken: (token) => set({ refreshToken: token }),
+      clearRefreshToken: () => set({ refreshToken: null }),
 
       setUser: (user) => set({ user }),
 
@@ -94,17 +102,23 @@ export const useAuthStore = create<AuthStoreState>()(
       },
 
       logout: () => {
-        set({ 
-          token: null,
-          user: null,
-          isAuthenticated: false,
-          isLoading: false
-        })
-        removeCookie('accessToken')
+        // 쿠키 삭제, 상태 false로
+        document.cookie = "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
+        document.cookie = "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
+        set({ isAuthenticated: false })
       },
 
       clearAuth: () => {
         get().logout()
+      },
+
+      initialize: async () => {
+        try {
+          await refreshAccessToken() // 토큰 리프레시
+          set({ isAuthenticated: true })
+        } catch {
+          set({ isAuthenticated: false })
+        }
       },
 
       initializeAuth: () => {

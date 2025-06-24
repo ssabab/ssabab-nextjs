@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 // 월간 분석 및 개인 분석 컴포넌트를 임포트합니다.
 import MonthlyAnalysis from '@/components/analysis/MonthlyAnalysis'; 
-import PersonalAnalysis from '@/components/analysis/PersonalAnalysis'; 
+import { PersonalAnalysis } from '@/components/analysis/PersonalAnalysis'; 
 
 export default function AnalyticsPage() {
   // 현재 활성화된 탭을 관리하는 상태 변수입니다. 초기값은 'monthly' 입니다.
