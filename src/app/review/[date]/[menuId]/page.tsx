@@ -221,6 +221,8 @@ const executeSubmission = async () => {
 
   setShowConfirmModal(false);
   setShowSuccessModal(true);
+  const todayISO = getKSTDateISO()
+  localStorage.setItem(`lunchReview_${todayISO}`, String(menuData.menuId))
 };
 
   const cancel = () => setShowCancelModal(false)
@@ -249,7 +251,7 @@ const executeSubmission = async () => {
   }
 
   return (
-    <main className="fixed inset-0 bg-black/10 flex items-center justify-center">
+    <main className="flex-1 pb-24 pt-6 inset-0 bg-gray-50 flex items-center justify-center">
       <div
         ref={wrapperRef}
         onClick={handleWrapperClick}
