@@ -164,18 +164,16 @@ export default function LunchSection() {
       return
     }
     if (hour >= 12  && hour < 23) {
-      // console.log(menu.menuId)
-      // if (todayReview === menu.menuId) {
-      //   const ok = window.confirm('기존에 작성한 리뷰가 초기화 됩니다. 다시 작성하시겠습니까?')
-      //   if (!ok) return
-      // }
-      // if (todayReview && todayReview !== menu.menuId) return
-      // localStorage.setItem(
-      //   `reviewPage_menu_${current.date}_${menu.menuId}`,
-      //   JSON.stringify(menu)
-      // );
-      // localStorage.setItem(`lunchReview_${todayISO}`, String(menu.menuId))
-      // setTodayReview(menu.menuId)
+      console.log(menu.menuId)
+      if (todayReview === menu.menuId) {
+        const ok = window.confirm('기존에 작성한 리뷰가 초기화 됩니다. 다시 작성하시겠습니까?')
+        if (!ok) return
+      }
+      if (todayReview && todayReview !== menu.menuId) return
+      localStorage.setItem(
+        `reviewPage_menu_${current.date}_${menu.menuId}`,
+        JSON.stringify(menu)
+      );
       router.push(`/review/${current.date}/${menu.menuId}`)
     }
   }
