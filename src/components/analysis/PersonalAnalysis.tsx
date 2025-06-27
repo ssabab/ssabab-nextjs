@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '@/stores/useAuthStore';
 import api from '@/lib/api';
+import { AxiosError } from 'axios';
 
 // API 응답 데이터 타입 정의
 interface UserSummary {
@@ -65,8 +66,14 @@ export function PersonalAnalysis() {
           headers: { Authorization: `Bearer ${token}` },
         });
         setData(res.data);
-      } catch (err: any) {
-        setError(err.response?.data?.message || err.message || '데이터를 불러오는 데 실패했습니다.');
+      } catch (err) {
+        if (err instanceof AxiosError && err.response) {
+            setError(err.response.data?.message || '데이터를 불러오는 데 실패했습니다.');
+        } else if (err instanceof Error) {
+            setError(err.message);
+        } else {
+            setError('알 수 없는 오류가 발생했습니다.');
+        }
       } finally {
         setLoading(false);
       }

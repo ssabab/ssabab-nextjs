@@ -1,8 +1,10 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'; // useState와 useEffect 임포트
+import React, { useState, useEffect, useMemo } from 'react'; // useState와 useEffect 임포트
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
-export default function InsightSection() {
+export function InsightSection() {
   // 임시 메뉴 추천 인사이트 데이터
   const menuRecommendations = [
     {
@@ -37,29 +39,38 @@ export default function InsightSection() {
     },
   ];
 
-  // 1. 임시 인사이트를 저장할 상태
-  const [currentRecommendation, setCurrentRecommendation] = useState(menuRecommendations[0]); // 기본값 설정 (서버 렌더링 시 사용될 값)
+  const [currentIndex, setCurrentIndex] = useState(0);
 
-  // 2. 컴포넌트가 클라이언트에서 마운트된 후에만 무작위 값 설정
+  const currentRecommendation = useMemo(() => menuRecommendations[currentIndex], [currentIndex]);
+
   useEffect(() => {
-    const randomIndex = Math.floor(Math.random() * menuRecommendations.length);
-    setCurrentRecommendation(menuRecommendations[randomIndex]);
-  }, []); // 빈 의존성 배열: 컴포넌트 마운트 시 한 번만 실행
+    const interval = setInterval(() => {
+      setCurrentIndex(prevIndex => (prevIndex + 1) % menuRecommendations.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handlePrev = () => {
+    setCurrentIndex(prevIndex => (prevIndex - 1 + menuRecommendations.length) % menuRecommendations.length);
+  };
+
+  const handleNext = () => {
+    setCurrentIndex(prevIndex => (prevIndex + 1) % menuRecommendations.length);
+  };
 
   return (
-    <section className="bg-white shadow rounded-lg p-6 space-y-4 font-sans">
-      <h3 className="text-lg font-semibold text-gray-800">오늘의 점심 추천 인사이트</h3>
-      <div className="bg-blue-50 border border-blue-100 text-blue-800 rounded-md p-4 text-center">
-        <p className="text-sm mb-2">
-          {/* <span className="font-bold text-base">{currentRecommendation.menu}</span>
-          을(를) 추천합니다!
-        </p>
-        <p className="text-sm">
-          <span className="font-medium text-blue-700">"{currentRecommendation.highlight}"</span>
-          {currentRecommendation.reason.replace(currentRecommendation.highlight, '')} */}
-          <span className="font-bold text-base">투표와 리뷰가 모이면 추천이 가능해져요!</span>
-        </p>
-      </div>
-    </section>
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle>오늘의 메뉴 추천</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col items-center text-center">
+        <p className="text-xl font-semibold mb-2">{currentRecommendation.menu}</p>
+        <p className="text-gray-500 mb-4">{currentRecommendation.reason}</p>
+        <div className="flex gap-4">
+          <Button onClick={handlePrev}>이전</Button>
+          <Button onClick={handleNext}>다음</Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
