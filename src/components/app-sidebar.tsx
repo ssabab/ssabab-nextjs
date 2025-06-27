@@ -1,37 +1,34 @@
 "use client"
 
 import * as React from "react"
+import Link from 'next/link'
 import {
-  IconCamera,
-  IconChartBar,
-  IconDashboard,
-  IconDatabase,
-  IconFileAi,
-  IconFileDescription,
-  IconFileWord,
-  IconFolder,
-  IconHelp,
-  IconInnerShadowTop,
-  IconListDetails,
-  IconReport,
-  IconSearch,
-  IconSettings,
-  IconUsers,
-} from "@tabler/icons-react"
+  IconHome,
+  IconNote,
+  IconUser,
+} from '@irsyad-aras/paranoid'
 
-import { NavDocuments } from "@/components/nav-documents"
-import { NavMain } from "@/components/nav-main"
-import { NavSecondary } from "@/components/nav-secondary"
-import { NavUser } from "@/components/nav-user"
+import { cn } from '@/lib/utils'
 import {
   Sidebar,
-  SidebarContent,
+  SidebarBody,
+  SidebarClose,
   SidebarFooter,
   SidebarHeader,
+  SidebarTrigger,
+  SidebarContent,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import { Button } from "@/components/ui/button"
+import { NavMain } from "@/components/nav-main"
+import { Separator } from "@/components/ui/separator"
+
+import {
+  IconInnerShadowTop,
+  IconListDetails,
+} from '@tabler/icons-react'
 
 const data = {
   // user: {
@@ -43,7 +40,7 @@ const data = {
     {
       title: "메뉴 등록/수정/삭제",
       url: "#",
-      icon: IconListDetails,
+      icon: IconNote,
     },
     // {
     //   title: "Dashboard",
@@ -155,31 +152,17 @@ const data = {
   // ],
 }
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar() {
   return (
-    <Sidebar collapsible="offcanvas" {...props}>
+    <Sidebar>
       <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              className="data-[slot=sidebar-menu-button]:!p-1.5"
-            >
-              <a href="#">
-                <IconInnerShadowTop className="!size-5" />
-                <span className="text-base font-semibold">SSABAB ADMIN</span>
-              </a>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <NavMain />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
-        {/* <NavDocuments items={data.documents} /> */}
-        {/* <NavSecondary items={data.navSecondary} className="mt-auto" /> */}
+        {/* Content goes here */}
       </SidebarContent>
       <SidebarFooter>
-        {/* <NavUser user={data.user} /> */}
+        {/* Footer goes here */}
       </SidebarFooter>
     </Sidebar>
   )

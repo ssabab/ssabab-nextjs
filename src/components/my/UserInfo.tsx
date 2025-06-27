@@ -3,8 +3,9 @@
 import { useAuthStore } from '@/stores/useAuthStore'
 import { Button } from '@/components/ui/button'
 import { Settings } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import {
   Dialog,
   DialogTrigger,
@@ -14,6 +15,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import api from '@/lib/api'
+import { AxiosError } from 'axios'
 
 interface UserInfo {
   username: string
@@ -31,7 +33,7 @@ export default function UserInfo() {
   const [isOpen, setIsOpen] = useState(false)
   const router = useRouter()
 
-  const fetchUserInfo = async () => {
+  const fetchUserInfo = useCallback(async () => {
     if (!token) return
     try {
       const res = await api.get('/account/info', {
@@ -43,11 +45,11 @@ export default function UserInfo() {
     } catch (err) {
       console.error('유저 정보 조회 실패', err)
     }
-  }
+  }, [token])
 
   useEffect(() => {
     fetchUserInfo()
-  }, [token])
+  }, [fetchUserInfo])
 
   const handleLogout = () => {
     logout()
@@ -76,8 +78,12 @@ export default function UserInfo() {
       } else {
         alert(res.data.message || '수정 실패')
       }
-    } catch (err: any) {
-      alert(err.response?.data?.message || '수정 중 오류 발생')
+    } catch (err) {
+      if (err instanceof AxiosError && err.response) {
+        alert(err.response.data?.message || '수정 중 오류 발생')
+      } else {
+        alert('수정 중 오류 발생')
+      }
     }
   }
 
@@ -86,9 +92,11 @@ export default function UserInfo() {
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-3">
           {userInfo?.profileImageUrl ? (
-            <img
+            <Image
               src={userInfo.profileImageUrl}
               alt="프로필 이미지"
+              width={40}
+              height={40}
               className="w-10 h-10 rounded-full object-cover"
             />
           ) : (

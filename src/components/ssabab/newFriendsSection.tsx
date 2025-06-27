@@ -40,55 +40,56 @@ export default function FriendsSection() {
       : Object.keys(reviewByMenu).map(Number)
   }, [isVoteTime, dataByMenu, reviewByMenu])
 
-  useEffect(() => {
-    if (!isAuthenticated) return
-    setLoading(true)
-    ;(async () => {
-      try {
-        if (isMorning) {
-          // (2) 사전투표 결과(메뉴별, 친구이름별, 메뉴명까지 집계)
-          const res = await api.get<{ votes: FriendPreVote[] }>(
-            '/api/vote/friends',
-            { params: { date: today } }
-          )
-          const counts: Record<number, { count: number; names: string[]; menuFoods: string[] }> = {}
-          for (const vote of res.data.votes) {
-            const id = vote.votedMenuId
-            if (!counts[id]) {
-              // 메뉴 이름: foodName 여러개면 쉼표로 연결(첫번째만 쓰고 싶으면 [0]만)
-              const menuFoods = vote.votedMenuInfo.map(f => f.foodName)
-              counts[id] = { count: 0, names: [], menuFoods }
-            }
-            counts[id].count += 1
-            counts[id].names.push(vote.friendName)
+  const fetchNewFriends = async () => {
+    setLoading(true);
+    try {
+      if (isMorning) {
+        // (2) 사전투표 결과(메뉴별, 친구이름별, 메뉴명까지 집계)
+        const res = await api.get<{ votes: FriendPreVote[] }>(
+          '/api/vote/friends',
+          { params: { date: today } }
+        )
+        const counts: Record<number, { count: number; names: string[]; menuFoods: string[] }> = {}
+        for (const vote of res.data.votes) {
+          const id = vote.votedMenuId
+          if (!counts[id]) {
+            // 메뉴 이름: foodName 여러개면 쉼표로 연결(첫번째만 쓰고 싶으면 [0]만)
+            const menuFoods = vote.votedMenuInfo.map(f => f.foodName)
+            counts[id] = { count: 0, names: [], menuFoods }
           }
-          setDataByMenu(counts)
-        } else {
-          // (3) 평점 결과 기존대로 사용
-          const res = await api.get<{ reviews: FriendMenuReview[] }>(
-            '/api/review/menu/friends',
-            { params: { date: today } }
-          )
-          console.log('Friend reviews:', res.data.reviews)
-          const byMenu: Record<number, { totalScore: number; count: number; menuFoods: string[]; friends: string[] }> = {}
-          for (const r of res.data.reviews) {
-            const id = r.votedMenuId
-            if (!byMenu[id]) {
-              byMenu[id] = { totalScore: 0, count: 0, menuFoods: r.votedMenuInfo.map(f => f.foodName), friends: [] }
-            }
-            byMenu[id].totalScore += r.averageMenuScore
-            byMenu[id].count += 1
-            byMenu[id].friends.push(r.friendName)
-          }
-          setReviewByMenu(byMenu)
+          counts[id].count += 1
+          counts[id].names.push(vote.friendName)
         }
-      } catch (e) {
-        setDataByMenu({})
-      } finally {
-        setLoading(false)
+        setDataByMenu(counts)
+      } else {
+        // (3) 평점 결과 기존대로 사용
+        const res = await api.get<{ reviews: FriendMenuReview[] }>(
+          '/api/review/menu/friends',
+          { params: { date: today } }
+        )
+        console.log('Friend reviews:', res.data.reviews)
+        const byMenu: Record<number, { totalScore: number; count: number; menuFoods: string[]; friends: string[] }> = {}
+        for (const r of res.data.reviews) {
+          const id = r.votedMenuId
+          if (!byMenu[id]) {
+            byMenu[id] = { totalScore: 0, count: 0, menuFoods: r.votedMenuInfo.map(f => f.foodName), friends: [] }
+          }
+          byMenu[id].totalScore += r.averageMenuScore
+          byMenu[id].count += 1
+          byMenu[id].friends.push(r.friendName)
+        }
+        setReviewByMenu(byMenu)
       }
-    })()
-  }, [isAuthenticated, isMorning, today])
+    } catch {
+      setDataByMenu({})
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchNewFriends()
+  }, [fetchNewFriends])
 
   if (!isAuthenticated) {
     return <section className="bg-white shadow rounded-lg p-6 font-sans text-center text-gray-500">로그인하시면 친구들의 밥 통계를 볼 수 있습니다!</section>

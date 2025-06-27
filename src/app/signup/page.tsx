@@ -157,19 +157,17 @@ export default function SignupPage() {
         body: JSON.stringify(combinedData),
       });
 
+      const data = await response.json()
       if (response.ok) {
-        alert('회원가입이 완료되었습니다!');
-        router.push('/ssabab'); // 회원가입 성공 후 ssabab 페이지로 이동
+        alert('회원가입 완료! 로그인 페이지로 이동합니다.')
+        router.push('/login')
       } else {
-        const errorResponseText = await response.text();
-        console.error('회원가입 실패 (백엔드 응답):', errorResponseText);
-                alert(`회원가입에 실패했습니다: ${response.statusText || errorResponseText}`);
+        alert(data.message || '회원가입 실패')
       }
-    } catch (error) {
-      router.push('/login');
-      alert('회원가입이 완료되었습니다! 다시 로그인 해주세요.');
+    } catch {
+      alert('회원가입 중 오류 발생')
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
   }
 

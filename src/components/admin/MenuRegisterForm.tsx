@@ -19,6 +19,16 @@ type MenuInput = {
   foods: FoodInput[]
 }
 
+interface Food {
+  foodId: number;
+  foodName: string;
+}
+
+interface MenuRegisterFormProps {
+  date: Date;
+  onRegister: () => void;
+}
+
 const createInitialFood = (): FoodInput => ({
   foodName: "",
   mainSub: "주메뉴",
@@ -30,18 +40,14 @@ const createInitialMenu = (): MenuInput => ({
   foods: Array.from({ length: 6 }, createInitialFood),
 })
 
-export default function MenuRegisterForm({
-  date,
-  onSuccess,
-}: {
-  date: string | Date
-  onSuccess?: (menus: any[]) => void
-}) {
+export function MenuRegisterForm({ date, onRegister }: MenuRegisterFormProps) {
   const [menus, setMenus] = useState<MenuInput[]>([
     createInitialMenu(),
     createInitialMenu(),
   ])
   const token = useAuthStore((state) => state.token)
+  const [foods1, setFoods1] = useState<Food[]>([])
+  const [foods2, setFoods2] = useState<Food[]>([])
 
   useEffect(() => {
     setMenus([createInitialMenu(), createInitialMenu()])
@@ -67,14 +73,24 @@ export default function MenuRegisterForm({
     )
   }
 
+  const handleAddFood = (menuNumber: 1 | 2, foodName: string) => {
+    if (!foodName.trim()) return;
+
+    const newFood = { foodId: Date.now(), foodName }; // 임시 ID
+    if (menuNumber === 1) {
+      setFoods1(prev => [...prev, newFood]);
+    } else {
+      setFoods2(prev => [...prev, newFood]);
+    }
+  };
+
   const handleRegister = async () => {
     if (!token) {
       alert("로그인이 필요합니다.")
       return
     }
 
-    const formattedDate =
-      typeof date === "string" ? date : date.toISOString().slice(0, 10)
+    const formattedDate = date.toISOString().split('T')[0];
 
     try {
       const res = await axios.post(
@@ -95,7 +111,7 @@ export default function MenuRegisterForm({
         const menusRes = await axios.get(
           `/api/menu?date=${formattedDate}`
         )
-        if (onSuccess) onSuccess(menusRes.data)
+        if (onRegister) onRegister()
       }
     } catch (err) {
       console.error(err)
@@ -105,7 +121,7 @@ export default function MenuRegisterForm({
 
   return (
     <div className="border p-4 rounded-md space-y-6">
-      <h2 className="text-lg font-semibold">{typeof date === "string" ? date : date.toLocaleDateString()} 메뉴 등록</h2>
+      <h2 className="text-lg font-semibold">{date.toLocaleDateString()} 메뉴 등록</h2>
       {menus.map((menu, menuIdx) => (
         <div key={menuIdx} className="space-y-2">
           <h3 className="font-medium">메뉴 {menuIdx + 1}</h3>

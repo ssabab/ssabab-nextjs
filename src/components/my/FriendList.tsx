@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useAuthStore } from '@/stores/useAuthStore'
 import {
   Dialog,
@@ -13,6 +13,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 import api from '@/lib/api'
+import { AxiosError } from 'axios'
 
 interface Friend {
   userId: number
@@ -29,11 +30,7 @@ export default function FriendList() {
   const [newFriendName, setNewFriendName] = useState('')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 
-  useEffect(() => {
-    if (token) fetchFriends()
-  }, [token])
-
-  const fetchFriends = async () => {
+  const fetchFriends = useCallback(async () => {
     try {
       const res = await api.get('/friends', {
         headers: { Authorization: `Bearer ${token}` },
@@ -42,7 +39,11 @@ export default function FriendList() {
     } catch (err) {
       console.error('친구 목록 불러오기 실패', err)
     }
-  }
+  }, [token])
+
+  useEffect(() => {
+    if (token) fetchFriends()
+  }, [token, fetchFriends])
 
   const handleAddFriend = async () => {
     if (!newFriendName.trim()) return
@@ -64,8 +65,12 @@ export default function FriendList() {
       } else {
         alert(res.data.error || '친구 추가 실패')
       }
-    } catch (err: any) {
-      alert(err.response?.data?.error || '친구 추가 실패')
+    } catch (err) {
+      if (err instanceof AxiosError && err.response) {
+        alert(err.response.data?.error || '친구 추가 실패')
+      } else {
+        alert('친구 추가 중 알 수 없는 오류 발생')
+      }
       console.error('친구 추가 실패', err)
     }
   }
@@ -83,8 +88,12 @@ export default function FriendList() {
       } else {
         alert(res.data.error || '친구 삭제 실패')
       }
-    } catch (err: any) {
-      alert(err.response?.data?.error || '친구 삭제 중 오류 발생')
+    } catch (err) {
+      if (err instanceof AxiosError && err.response) {
+        alert(err.response.data?.error || '친구 삭제 중 오류 발생')
+      } else {
+        alert('친구 삭제 중 알 수 없는 오류 발생')
+      }
       console.error(err)
     }
   }
