@@ -11,7 +11,7 @@ export default function LoginPage() {
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     // 브라우저를 백엔드 로그인 엔드포인트로 직접 리디렉션하여 Google OAuth 흐름 시작
-    window.location.href = 'http://localhost:8080/account/login';
+    window.location.href = `${process.env.NEXT_PUBLIC_API_BASE_URL}/account/login`;
   }
 
   const handleGithubLogin = async () => {

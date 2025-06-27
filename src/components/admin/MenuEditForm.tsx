@@ -54,7 +54,7 @@ export default function MenuEditForm({
 
     try {
       await axios.put(
-        `http://localhost:8080/api/menu/${menu.menuId}`,
+        `/api/menu/${menu.menuId}`,
         menu.foods.map((food: any) => ({
           foodName: food.foodName,
           mainSub: food.mainSub,
@@ -85,7 +85,7 @@ export default function MenuEditForm({
     if (!confirm(`${date}의 메뉴를 정말 삭제하시겠습니까?`)) return
 
     try {
-      await axios.delete(`http://localhost:8080/api/menu/${date}`, {
+      await axios.delete(`/api/menu/${date}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
 

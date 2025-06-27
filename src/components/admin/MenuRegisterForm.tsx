@@ -78,7 +78,7 @@ export default function MenuRegisterForm({
 
     try {
       const res = await axios.post(
-        `http://localhost:8080/api/menu/${formattedDate}`,
+        `/api/menu/${formattedDate}`,
         menus,
         {
           headers: {
@@ -93,7 +93,7 @@ export default function MenuRegisterForm({
 
         // 등록 후 새로 데이터 불러와서 상위로 전달
         const menusRes = await axios.get(
-          `http://localhost:8080/api/menu?date=${formattedDate}`
+          `/api/menu?date=${formattedDate}`
         )
         if (onSuccess) onSuccess(menusRes.data)
       }

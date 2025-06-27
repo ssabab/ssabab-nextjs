@@ -149,7 +149,7 @@ export default function SignupPage() {
     console.log('전송할 회원가입 데이터 (백엔드 형식):', combinedData);
 
     try {
-      const response = await fetch('http://localhost:8080/account/signup', {
+      const response = await fetch('/account/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

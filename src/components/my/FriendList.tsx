@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
+import api from '@/lib/api'
 
 interface Friend {
   userId: number
@@ -34,12 +35,10 @@ export default function FriendList() {
 
   const fetchFriends = async () => {
     try {
-      const res = await fetch('http://localhost:8080/friends', {
+      const res = await api.get('/friends', {
         headers: { Authorization: `Bearer ${token}` },
-        credentials: 'include',
       })
-      const data = await res.json()
-      setFriends(data.friends || [])
+      setFriends(res.data.friends || [])
     } catch (err) {
       console.error('친구 목록 불러오기 실패', err)
     }
@@ -48,24 +47,25 @@ export default function FriendList() {
   const handleAddFriend = async () => {
     if (!newFriendName.trim()) return
     try {
-      const res = await fetch('http://localhost:8080/friends', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+      const res = await api.post(
+        '/friends',
+        { username: newFriendName },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
         },
-        credentials: 'include',
-        body: JSON.stringify({ username: newFriendName }),
-      })
-      const data = await res.json()
-      if (res.ok) {
+      )
+      if (res.status === 200 || res.status === 201) {
         setNewFriendName('')
         setIsDialogOpen(false)
         fetchFriends()
       } else {
-        alert(data.error || '친구 추가 실패')
+        alert(res.data.error || '친구 추가 실패')
       }
-    } catch (err) {
+    } catch (err: any) {
+      alert(err.response?.data?.error || '친구 추가 실패')
       console.error('친구 추가 실패', err)
     }
   }
@@ -73,21 +73,18 @@ export default function FriendList() {
   const handleDeleteFriend = async (friendId: number) => {
     if (!window.confirm('정말 이 친구를 삭제하시겠습니까?')) return
     try {
-      const res = await fetch(`http://localhost:8080/friends/${friendId}`, {
-        method: 'DELETE',
+      const res = await api.delete(`/friends/${friendId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-        credentials: 'include',
       })
-      const data = await res.json()
-      if (res.ok) {
+      if (res.status === 200) {
         setFriends(prev => prev.filter(f => f.userId !== friendId))
       } else {
-        alert(data.error || '친구 삭제 실패')
+        alert(res.data.error || '친구 삭제 실패')
       }
-    } catch (err) {
-      alert('친구 삭제 중 오류 발생')
+    } catch (err: any) {
+      alert(err.response?.data?.error || '친구 삭제 중 오류 발생')
       console.error(err)
     }
   }

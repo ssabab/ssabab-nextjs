@@ -13,6 +13,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
+import api from '@/lib/api'
 
 interface UserInfo {
   username: string
@@ -33,14 +34,12 @@ export default function UserInfo() {
   const fetchUserInfo = async () => {
     if (!token) return
     try {
-      const res = await fetch('http://localhost:8080/account/info', {
+      const res = await api.get('/account/info', {
         headers: { Authorization: `Bearer ${token}` },
-        credentials: 'include',
       })
-      const data = await res.json()
-      setUserInfo(data)
-      setEditUsername(data.username)
-      setEditClassNum(data.classNum)
+      setUserInfo(res.data)
+      setEditUsername(res.data.username)
+      setEditClassNum(res.data.classNum)
     } catch (err) {
       console.error('유저 정보 조회 실패', err)
     }
@@ -57,28 +56,28 @@ export default function UserInfo() {
 
   const handleUpdate = async () => {
     try {
-      const res = await fetch('http://localhost:8080/account/update', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        credentials: 'include',
-        body: JSON.stringify({
+      const res = await api.put(
+        '/account/update',
+        {
           username: editUsername,
           classNum: editClassNum,
-        }),
-      })
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      )
 
-      if (res.ok) {
+      if (res.status === 200) {
         setIsOpen(false)
         fetchUserInfo()
       } else {
-        const error = await res.json()
-        alert(error.message || '수정 실패')
+        alert(res.data.message || '수정 실패')
       }
-    } catch (err) {
-      alert('수정 중 오류 발생')
+    } catch (err: any) {
+      alert(err.response?.data?.message || '수정 중 오류 발생')
     }
   }
 

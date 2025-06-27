@@ -1,50 +1,124 @@
 import React, { useEffect, useState } from 'react';
-import { usePersonalAnalysisStore } from '@/stores/usePersonalAnalysisStore'
-import api from '@/lib/api'
+import { useAuthStore } from '@/stores/useAuthStore';
+import api from '@/lib/api';
+
+// API 응답 데이터 타입 정의
+interface UserSummary {
+  avgScore: number;
+  totalReviews: number;
+}
+
+interface FoodRank {
+  foodName: string;
+  foodScore: number;
+}
+
+interface CategoryStat {
+  category: string;
+  count: number;
+}
+
+interface TagStat {
+  tag: string;
+  count: number;
+}
+
+interface UserInsight {
+  insight: string;
+}
+
+interface GroupComparison {
+  userAvgScore: number;
+  userDiversityScore: number;
+  groupAvgScore: number;
+  groupDiversityScore: number;
+}
+
+interface PersonalAnalysisData {
+  dm_user_summary: UserSummary;
+  dm_user_food_rating_rank_best: FoodRank[];
+  dm_user_food_rating_rank_worst: FoodRank[];
+  dm_user_category_stats: CategoryStat[];
+  dm_user_tag_stats: TagStat[];
+  dm_user_insight: UserInsight;
+  dm_user_group_comparison: GroupComparison;
+}
+
 
 export function PersonalAnalysis() {
-  const { data, setData } = usePersonalAnalysisStore()
-  const [error, setError] = useState<string | null>(null)
+  const { token } = useAuthStore();
+  const [data, setData] = useState<PersonalAnalysisData | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get('/api/analysis/personal')
-      .then(res => {
-        setData(res.data)
-      })
-      .catch(err => {
-        if (err.response) {
-          setError(`요청 실패: ${err.response.status} ${err.response.statusText}`)
-        } else {
-          setError(err.message)
-        }
-      })
-  }, [setData])
-  
-  if (error) return <div>에러: {error}</div>
-  if (!data) return <div>로딩중...</div>
+    if (!token) {
+        setLoading(false);
+        setError("개인 분석을 보려면 로그인이 필요합니다.");
+        return;
+    }
 
-  // react-tagcloud 옵션 설정
+    const fetchPersonalAnalysis = async () => {
+      try {
+        setLoading(true);
+        const res = await api.get<PersonalAnalysisData>('/api/analysis/personal', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setData(res.data);
+      } catch (err: any) {
+        setError(err.response?.data?.message || err.message || '데이터를 불러오는 데 실패했습니다.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPersonalAnalysis();
+  }, [token]);
+
+  if (loading) return <div className="p-8 text-center">개인화 분석 데이터를 불러오는 중...</div>;
+  if (error) return <div className="p-8 text-center text-red-500">오류: {error}</div>;
+  if (!data) return <div className="p-8 text-center">분석 데이터가 없습니다.</div>;
+  
+  const {
+    dm_user_summary,
+    dm_user_food_rating_rank_best,
+    dm_user_food_rating_rank_worst,
+    dm_user_category_stats,
+    dm_user_tag_stats,
+    dm_user_insight,
+    dm_user_group_comparison,
+  } = data;
+
   const tagCloudOptions = {
-    // minSize와 maxSize는 px 단위로 직접 설정합니다.
     minSize: 12,
     maxSize: 48,
-    // 랜덤 회전 여부
-    // randomizeRotation: true,
-    // 정렬 방식 (word, weight)
-    // sortBy: 'weight',
   };
+  
+  const totalCategoryCount = dm_user_category_stats.reduce((sum, cat) => sum + cat.count, 0);
+  const preferredCategories = totalCategoryCount > 0 ? dm_user_category_stats.map(cat => ({
+    name: cat.category,
+    percentage: parseFloat(((cat.count / totalCategoryCount) * 100).toFixed(1)),
+  })) : [];
+  
+  // 워드 클라우드 데이터 가공
+  const maxTagCount = Math.max(...dm_user_tag_stats.map(t => t.count), 1);
+  const preferredKeywordsForCloud = dm_user_tag_stats.map(tag => ({
+    value: tag.tag,
+    count: tag.count,
+    // count에 따라 색상이나 다른 스타일을 동적으로 부여할 수 있습니다.
+    // 예시: color: `rgba(34, 197, 94, ${tag.count / maxTagCount})`
+  }));
 
 
   return (
     <div className="space-y-8">
-      {/* 1. 평균 평점 및 전체 리뷰 수 (숫자 카드 + 게이지 차트) */}
+      {/* 1. 평균 평점 및 전체 리뷰 수 */}
       <div className="bg-white p-6 rounded-lg shadow border border-gray-200 flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-8">
         <div className="text-center">
           <h3 className="text-xl font-semibold text-gray-800 mb-2">⭐ 평균 평점 및 전체 리뷰 수</h3>
-          <p className="text-5xl font-bold text-indigo-600">{data.ratingData.averageRating}</p>
-          <p className="text-sm text-gray-500 mt-1">총 {data.ratingData.totalReviews}개 리뷰</p>
+          <p className="text-5xl font-bold text-indigo-600">{dm_user_summary.avgScore.toFixed(2)}</p>
+          <p className="text-sm text-gray-500 mt-1">총 {dm_user_summary.totalReviews}개 리뷰</p>
         </div>
-        {/* 간단한 게이지 차트 시뮬레이션 (SVG 아크) */}
         <div className="relative w-32 h-32">
           <svg className="w-full h-full" viewBox="0 0 100 100">
             <circle
@@ -56,54 +130,45 @@ export function PersonalAnalysis() {
               cx="50" cy="50" r="45"
               fill="none" stroke="#8B5CF6" strokeWidth="10"
               strokeDasharray="282.7" // 2 * PI * 45
-              strokeDashoffset={(1 - (data.ratingData.averageRating / 5)) * 282.7} // 5점 만점
+              strokeDashoffset={(1 - (dm_user_summary.avgScore / 5)) * 282.7} // 5점 만점
               transform="rotate(-90 50 50)"
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-2xl font-bold text-gray-800">{data.ratingData.averageRating}</span>
+            <span className="text-2xl font-bold text-gray-800">{dm_user_summary.avgScore.toFixed(2)}</span>
           </div>
         </div>
       </div>
 
-      {/* 2. 가장 높게 평가한 음식 TOP 3 / 3. 가장 낮게 평가한 음식 TOP 3 */}
+      {/* 2. 가장 높게 평가한 음식 TOP 5 / 3. 가장 낮게 평가한 음식 TOP 5 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* 가장 높게 평가한 음식 TOP 3 */}
         <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
-          <h3 className="text-xl font-semibold text-gray-800 mb-4">💯 가장 높게 평가한 음식 TOP 3</h3>
+          <h3 className="text-xl font-semibold text-gray-800 mb-4">💯 가장 높게 평가한 음식 TOP 5</h3>
           <div className="space-y-4">
-            {(data.topRatedFoods ?? []).map((food, index) => (
+            {dm_user_food_rating_rank_best.slice(0, 5).map((food, index) => (
               <div key={index} className="flex items-center space-x-4 border-b pb-3 last:border-b-0 last:pb-0">
-                <div>
-                  <p className="font-semibold text-gray-700">{food.name}</p>
-                  <p className="text-sm text-yellow-500">{food.rating} ★</p>
-                  <p className="text-xs text-gray-500">{food.date}</p>
-                </div>
+                <p className="font-semibold text-gray-700">{food.foodName}</p>
+                <p className="text-sm text-yellow-500">{food.foodScore.toFixed(1)} ★</p>
               </div>
             ))}
           </div>
         </div>
 
-        {/* 가장 낮게 평가한 음식 TOP 3 */}
         <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
-          <h3 className="text-xl font-semibold text-gray-800 mb-4">💔 가장 낮게 평가한 음식 TOP 3</h3>
+          <h3 className="text-xl font-semibold text-gray-800 mb-4">💔 가장 낮게 평가한 음식 TOP 5</h3>
           <div className="space-y-4">
-            {(data.lowestRatedFoods ?? []).map((food, idx) => (
+            {dm_user_food_rating_rank_worst.slice(0, 5).map((food, idx) => (
               <div key={idx} className="flex items-center space-x-4 border-b pb-3 last:border-b-0 last:pb-0">
-                <div>
-                  <p className="font-semibold text-gray-700">{food.name}</p>
-                  <p className="text-sm text-red-500">{food.rating} ★</p>
-                  <p className="text-xs text-gray-500">{food.date}</p>
-                </div>
+                <p className="font-semibold text-gray-700">{food.foodName}</p>
+                <p className="text-sm text-red-500">{food.foodScore.toFixed(1)} ★</p>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* 4. 선호 카테고리 (도넛 차트) & 5. 선호 키워드 (워드클라우드) - 한 행에 배치 */}
+      {/* 4. 선호 카테고리 & 5. 선호 키워드 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* 선호 카테고리 */}
         <div className="bg-white p-6 rounded-lg shadow border border-gray-200 flex flex-col items-center">
           <h3 className="text-xl font-semibold text-gray-800 mb-4">📌 선호 카테고리</h3>
           <div className="flex flex-wrap justify-center items-center gap-6">
@@ -111,13 +176,16 @@ export function PersonalAnalysis() {
               <svg className="w-full h-full" viewBox="0 0 100 100">
                 {(() => {
                   let cumulativePercentage = 0;
-                  const colors = ['#EF4444', '#F97316', '#F59E0B', '#22C55E', '#3B82F6']; // Tailwind colors
-                  return data.preferredCategories.map((category, index) => {
-                    const startAngle = cumulativePercentage * 3.6; // Degrees
-                    cumulativePercentage += category.percentage;
+                  const colors = ['#EF4444', '#F97316', '#F59E0B', '#22C55E', '#3B82F6'];
+                  return preferredCategories.map((category, index) => {
+                    const percentage = category.percentage;
+                    if (percentage === 0) return null;
+                    
+                    const startAngle = cumulativePercentage * 3.6;
+                    cumulativePercentage += percentage;
                     const endAngle = cumulativePercentage * 3.6;
 
-                    const largeArcFlag = category.percentage > 50 ? 1 : 0;
+                    const largeArcFlag = percentage > 50 ? 1 : 0;
                     const x1 = 50 + 40 * Math.cos((Math.PI / 180) * startAngle);
                     const y1 = 50 + 40 * Math.sin((Math.PI / 180) * startAngle);
                     const x2 = 50 + 40 * Math.cos((Math.PI / 180) * endAngle);
@@ -134,11 +202,11 @@ export function PersonalAnalysis() {
                     );
                   });
                 })()}
-                <circle cx="50" cy="50" r="25" fill="#fff" /> {/* 중앙의 흰색 원 */}
+                <circle cx="50" cy="50" r="25" fill="#fff" />
               </svg>
             </div>
             <ul className="text-sm text-gray-700 space-y-2">
-              {(data.preferredCategories ?? []).map((category, index) => (
+              {preferredCategories.map((category, index) => (
                 <li key={index} className="flex items-center">
                   <span
                     className="inline-block w-3 h-3 rounded-full mr-2"
@@ -152,21 +220,16 @@ export function PersonalAnalysis() {
           <p className="text-sm text-gray-500 mt-4">평점 기반 선호 카테고리 비중 시각화</p>
         </div>
 
-        {/* 선호 키워드 (커스텀 워드클라우드) */}
         <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
           <h3 className="text-xl font-semibold text-gray-800 mb-4">🏷️ 선호 키워드 (워드클라우드)</h3>
-          {/* 커스텀 워드 클라우드 컨테이너 */}
           <div className="h-60 w-full flex items-center justify-center bg-gray-50 rounded-md border border-gray-200 p-2 overflow-hidden">
             <div className="flex flex-wrap justify-center items-center gap-2 max-w-full">
-              {(data.preferredKeywordsForCloud ?? []).map((tag, index) => {
-                const fontSize = tagCloudOptions.minSize + (tag.count / 10) * (tagCloudOptions.maxSize - tagCloudOptions.minSize);
+              {preferredKeywordsForCloud.map((tag, index) => {
+                const fontSize = tagCloudOptions.minSize + (tag.count / maxTagCount) * (tagCloudOptions.maxSize - tagCloudOptions.minSize);
                 return (
                   <span
                     key={`tag-${index}-${tag.value}`}
-                    style={{
-                      fontSize: `${fontSize}px`,
-                      color: tag.color,
-                    }}
+                    style={{ fontSize: `${fontSize}px` }}
                     className="inline-block m-1 px-3 py-1 bg-blue-100 rounded-full font-semibold cursor-default transition-all duration-300 hover:bg-blue-200"
                   >
                     #{tag.value}
@@ -179,41 +242,33 @@ export function PersonalAnalysis() {
         </div>
       </div>
 
-      {/* 6. 개인 인사이트 요약 & 8. 전체 평균과의 차이 - 한 행에 배치 */}
+      {/* 6. 개인 인사이트 요약 & 8. 전체 평균과의 차이 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* 개인 인사이트 요약 (텍스트 박스) */}
         <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
           <h3 className="text-xl font-semibold text-gray-800 mb-4">🧠 개인 인사이트 요약</h3>
           <p className="text-gray-700 leading-relaxed bg-gray-50 p-4 rounded-md border border-gray-200 min-h-[150px]">
-            {data.personalInsight}
+            {dm_user_insight.insight}
           </p>
           <p className="text-sm text-gray-500 mt-2">전처리된 자연어 요약 문장</p>
         </div>
 
-        {/* 전체 평균과의 차이 (간단 비교 텍스트) */}
         <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
           <h3 className="text-xl font-semibold text-gray-800 mb-4">🆚 전체 평균과의 차이</h3>
           <div className="space-y-3 bg-gray-50 p-4 rounded-md border border-gray-200 min-h-[150px] flex flex-col justify-center">
             <p className="text-gray-700">
-              <span className="font-semibold">평점:</span> 내 평균 평점({data.comparisonData.myRating}점)은 커뮤니티 평균({data.comparisonData.avgRatingCommunity}점)보다
-              <span className={`font-bold ${data.comparisonData.myRating > data.comparisonData.avgRatingCommunity ? 'text-green-600' : 'text-red-600'}`}>
-                {data.comparisonData.myRating > data.comparisonData.avgRatingCommunity ? ' 높습니다.' : ' 낮습니다.'}
+              <span className="font-semibold">평점:</span> 내 평균 평점({dm_user_group_comparison.userAvgScore.toFixed(2)}점)은 전체 평균({dm_user_group_comparison.groupAvgScore.toFixed(2)}점)보다
+              <span className={`font-bold ${dm_user_group_comparison.userAvgScore >= dm_user_group_comparison.groupAvgScore ? 'text-green-600' : 'text-red-600'}`}>
+                {dm_user_group_comparison.userAvgScore >= dm_user_group_comparison.groupAvgScore ? ' 높거나 같습니다.' : ' 낮습니다.'}
               </span>
             </p>
             <p className="text-gray-700">
-              <span className="font-semibold">매운맛 선호도:</span> 저는 커뮤니티 평균보다
-              <span className={`font-bold ${data.comparisonData.mySpicyPreference > data.comparisonData.avgSpicyCommunity ? 'text-green-600' : 'text-red-600'}`}>
-                {data.comparisonData.mySpicyPreference > data.comparisonData.avgSpicyCommunity ? ' 매운맛을 더 선호합니다.' : ' 덜 선호합니다.'}
-              </span>
-            </p>
-            <p className="text-gray-700">
-              <span className="font-semibold">다양성 추구:</span> 새로운 음식을 시도하는 정도가 커뮤니티 평균보다
-              <span className={`font-bold ${data.comparisonData.myVarietySeeking < data.comparisonData.avgVarietyCommunity ? 'text-green-600' : 'text-red-600'}`}>
-                {data.comparisonData.myVarietySeeking < data.comparisonData.avgVarietyCommunity ? ' 낮은 편입니다.' : ' 높은 편입니다.'}
+              <span className="font-semibold">다양성:</span> 나의 식사 다양성 점수({dm_user_group_comparison.userDiversityScore.toFixed(2)})는 전체 평균({dm_user_group_comparison.groupDiversityScore.toFixed(2)})보다
+              <span className={`font-bold ${dm_user_group_comparison.userDiversityScore >= dm_user_group_comparison.groupDiversityScore ? 'text-green-600' : 'text-red-600'}`}>
+                {dm_user_group_comparison.userDiversityScore >= dm_user_group_comparison.groupDiversityScore ? ' 높거나 같습니다.' : ' 낮습니다.'}
               </span>
             </p>
           </div>
-          <p className="text-sm text-gray-500 mt-2">동일 음식군 대비 나의 평점 및 선호도 위치 비교</p>
+          <p className="text-sm text-gray-500 mt-2">나의 식사 평점 및 다양성 위치 비교</p>
         </div>
       </div>
     </div>

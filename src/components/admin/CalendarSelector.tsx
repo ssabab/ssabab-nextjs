@@ -19,7 +19,7 @@ export default function CalendarSelector({
     const formatted = date.toLocaleDateString("sv-SE") // YYYY-MM-DD
 
     try {
-      const res = await axios.get(`http://localhost:8080/api/menu?date=${formatted}`)
+      const res = await axios.get(`/api/menu?date=${formatted}`)
       onMenuCheckResult(formatted, res.data)
     } catch (err: any) {
       if (err.response?.status === 400 || err.response?.status === 404) {

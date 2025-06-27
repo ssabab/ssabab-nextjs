@@ -32,7 +32,7 @@ export default function AdminPage() {
       }
 
       try {
-        const response = await axios.get("http://localhost:8080/admin", {
+        const response = await axios.get("/admin", {
           headers: { Authorization: `Bearer ${latestToken}` },
         })
 

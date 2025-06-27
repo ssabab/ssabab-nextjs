@@ -1,78 +1,115 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import api from '@/lib/api';
 // TempDonutChart는 이 파일에서 사용되지 않으므로 임시로 주석 처리하거나, 실제 사용처에 따라 관리합니다.
 // import TempDonutChart from './TempDonutChart'; // 도넛 차트 컴포넌트 임포트 (다른 곳에서 사용될 수 있으므로 유지)
 
+// 데이터 구조에 대한 인터페이스 정의
+interface Food {
+  name: string;
+  reviews: number;
+  rating: number;
+}
+
+interface MonthlyVisitors {
+  current: number;
+  previous: number;
+  totalCumulative: number;
+  previousMonthCumulative: number;
+}
+
+interface CumulativeEvaluations {
+  currentMonth: number;
+  totalCumulative: number;
+  previousMonthCumulative: number;
+}
+
+interface RatingDistribution {
+  min: number;
+  max: number;
+  avg: number;
+  iqrStart: number;
+  iqrEnd: number;
+  variance: number;
+  stdDev: number;
+}
+
+interface FrequentVisitor {
+  name: string;
+  visits: number;
+  lastVisit: string;
+}
+
+interface MonthlyOverallRating {
+  average: number;
+  totalEvaluations: number;
+}
+
+interface MonthlyAnalysisData {
+  topFoods: Food[];
+  worstFoods: Food[];
+  monthlyVisitors: MonthlyVisitors;
+  cumulativeEvaluations: CumulativeEvaluations;
+  ratingDistribution: RatingDistribution;
+  frequentVisitors: FrequentVisitor[];
+  monthlyOverallRating: MonthlyOverallRating;
+}
+
 export default function MonthlyAnalysis() {
-  // 임시 데이터: 이달의 총 인기 음식 TOP 5 (리뷰 수 기준)
-  const topFoods = [
-    { name: "맛있는 불고기", reviews: 120, rating: 4.8 },
-    { name: "신선한 샐러드", reviews: 95, rating: 4.5 },
-    { name: "든든한 제육볶음", reviews: 80, rating: 4.3 },
-    { name: "매콤한 떡볶이", reviews: 70, rating: 4.0 },
-    { name: "시원한 냉면", reviews: 65, rating: 4.2 },
-  ];
-  const maxReviews = Math.max(...topFoods.map(food => food.reviews));
+  const [analysisData, setAnalysisData] = useState<MonthlyAnalysisData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // 임시 데이터: 이달의 총 최악 음식 TOP 5 (리뷰 수 기준, 낮은 평점)
-  const worstFoods = [
-    { name: "비린내 나는 생선구이", reviews: 15, rating: 2.1 },
-    { name: "싱거운 된장찌개", reviews: 20, rating: 2.5 },
-    { name: "딱딱한 탕수육", reviews: 25, rating: 2.8 },
-    { name: "기름진 볶음밥", reviews: 30, rating: 3.0 },
-    { name: "늦게 나온 파스타", reviews: 35, rating: 3.2 },
-  ];
-  const maxWorstReviews = Math.max(...worstFoods.map(food => food.reviews));
+  useEffect(() => {
+    const fetchMonthlyAnalysis = async () => {
+      try {
+        const response = await api.get<MonthlyAnalysisData>('/api/analysis/monthly');
+        setAnalysisData(response.data);
+      } catch (err) {
+        setError('월간 분석 데이터를 불러오는 데 실패했습니다.');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  // 임시 데이터: 월간 방문자 수 (누적 및 상승분 포함)
-  const monthlyVisitors = {
-    current: 15200, // 이달의 순수 방문자 수 (히스토그램용)
-    previous: 14500, // 이전달 순수 방문자 수 (히스토그램용)
-    monthlyTrend: [12000, 12500, 13000, 13500, 14000, 14500, 15200], // 7개월치 데이터 (히스토그램용)
-    totalCumulative: 152000, // 전체 누적 방문자 수
-    previousMonthCumulative: 140000, // 이전 달까지의 누적 방문자 수
-  };
+    fetchMonthlyAnalysis();
+  }, []);
+
+  if (loading) {
+    return <div className="p-8 text-center">월간 분석 데이터를 불러오는 중...</div>;
+  }
+
+  if (error) {
+    return <div className="p-8 text-center text-red-500">오류: {error}</div>;
+  }
+
+  if (!analysisData) {
+    return <div className="p-8 text-center">데이터가 없습니다.</div>;
+  }
+
+  const {
+    topFoods,
+    worstFoods,
+    monthlyVisitors,
+    cumulativeEvaluations,
+    ratingDistribution,
+    frequentVisitors,
+    monthlyOverallRating,
+  } = analysisData;
+
+  const maxReviews = Math.max(...topFoods.map(food => food.reviews), 0);
+  const maxWorstReviews = Math.max(...worstFoods.map(food => food.reviews), 0);
+
   const visitorIncrease = monthlyVisitors.totalCumulative - monthlyVisitors.previousMonthCumulative;
-  const visitorChangePercentage = (
+  const visitorChangePercentage = monthlyVisitors.previousMonthCumulative > 0 ? (
     (visitorIncrease / monthlyVisitors.previousMonthCumulative) * 100
-  ).toFixed(2);
+  ).toFixed(2) : "0.00";
 
 
-  // 임시 데이터: 누적 평가 수
-  const cumulativeEvaluations = {
-    currentMonth: 5011, // 이번 달에 발생한 평가 수
-    totalCumulative: 15611, // 전체 누적 평가 수
-    previousMonthCumulative: 10600, // 이전 달까지의 누적 평가 수
-  };
   const evaluationIncrease = cumulativeEvaluations.totalCumulative - cumulativeEvaluations.previousMonthCumulative;
-  const evaluationChangePercentage = (
+  const evaluationChangePercentage = cumulativeEvaluations.previousMonthCumulative > 0 ? (
     (evaluationIncrease / cumulativeEvaluations.previousMonthCumulative) * 100
-  ).toFixed(2);
-
-  // 임시 데이터: 평점 분포 통계 데이터 (분산 및 표준편차는 임시 값)
-  const ratingDistribution = {
-    min: 2.5,
-    max: 5.0,
-    avg: 4.1,
-    iqrStart: 3.8, // 1분위수 (Q1)
-    iqrEnd: 4.5,   // 3분위수 (Q3)
-    variance: 0.35, // 임시 값 (실제 데이터로 계산 필요)
-    stdDev: 0.59,   // 임시 값 (실제 데이터로 계산 필요)
-  };
-
-  // 임시 데이터: 최빈 방문 유저 Top 5
-  const frequentVisitors = [
-    { name: "김*원", visits: 30, lastVisit: "2024.06.14" },
-    { name: "이*희", visits: 28, lastVisit: "2024.06.13" },
-    { name: "박*호", visits: 25, lastVisit: "2024.06.12" },
-    { name: "최*영", visits: 22, lastVisit: "2024.06.11" },
-    { name: "정*진", visits: 20, lastVisit: "2024.06.10" },
-  ];
-
-  // 이달의 평점 (전체 평균)
-  const monthlyOverallRating = {
-    average: 4.1,
-    totalEvaluations: cumulativeEvaluations.currentMonth,
-  };
+  ).toFixed(2) : "0.00";
 
   return (
     <div className="space-y-8 p-4 sm:p-6 md:p-8"> {/* 전체 레이아웃을 위한 패딩 추가 */}
@@ -90,8 +127,8 @@ export default function MonthlyAnalysis() {
           <h3 className="text-xl font-semibold text-gray-800 mb-4">⭐ 누적 평가 수</h3>
           <p className="text-5xl font-bold text-orange-500 mb-2">{cumulativeEvaluations.totalCumulative.toLocaleString()}개</p>
           {/* 누적 평가 상승분 색상 변경 */}
-          <div className="text-lg font-semibold mt-2 ${evaluationIncrease >= 0 ? 'text-blue-500' : 'text-orange-500'}">
-            {evaluationIncrease >= 0 ? '▲' : '▼'} {evaluationIncrease.toLocaleString()}개
+          <div className={`text-lg font-semibold mt-2 ${evaluationIncrease >= 0 ? 'text-blue-500' : 'text-orange-500'}`}>
+            {evaluationIncrease >= 0 ? '▲' : '▼'} {evaluationIncrease.toLocaleString()}개 ({evaluationChangePercentage}%)
           </div>
         </div>
 
@@ -99,7 +136,7 @@ export default function MonthlyAnalysis() {
         <div className="bg-white p-6 rounded-lg shadow border border-gray-200 flex flex-col items-center justify-center text-center">
           <h3 className="text-xl font-semibold text-gray-800 mb-4">📈 월간 누적 방문자 수</h3>
           <p className="text-5xl font-bold text-blue-600 mb-2">{monthlyVisitors.totalCumulative.toLocaleString()}명</p>
-          <div className="text-lg font-semibold mt-2 ${visitorIncrease >= 0 ? 'text-blue-500' : 'text-orange-500'}">
+          <div className={`text-lg font-semibold mt-2 ${visitorIncrease >= 0 ? 'text-blue-500' : 'text-orange-500'}`}>
             이번 달 {visitorIncrease >= 0 ? '▲' : '▼'} {visitorIncrease.toLocaleString()}명 (
             {Math.abs(parseFloat(visitorChangePercentage))}%
             )
@@ -119,7 +156,7 @@ export default function MonthlyAnalysis() {
                 <div className="flex-1 bg-gray-200 rounded-full h-4 relative ml-4">
                   <div
                     className="bg-green-500 h-full rounded-full transition-all duration-500 ease-out"
-                    style={{ width: `${(food.reviews / maxReviews) * 100}%` }}
+                    style={{ width: `${maxReviews > 0 ? (food.reviews / maxReviews) * 100 : 0}%` }}
                   ></div>
                   <span className="absolute right-2 top-0 text-xs text-white leading-4 font-bold">
                     {food.reviews}
@@ -141,7 +178,7 @@ export default function MonthlyAnalysis() {
                 <div className="flex-1 bg-gray-200 rounded-full h-4 relative ml-4">
                   <div
                     className="bg-red-500 h-full rounded-full transition-all duration-500 ease-out"
-                    style={{ width: `${(food.reviews / maxWorstReviews) * 100}%` }}
+                    style={{ width: `${maxWorstReviews > 0 ? (food.reviews / maxWorstReviews) * 100 : 0}%` }}
                   ></div>
                     <span className="absolute right-2 top-0 text-xs text-white leading-4 font-bold">
                       {food.reviews}
