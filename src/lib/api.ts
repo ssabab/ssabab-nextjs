@@ -91,7 +91,7 @@ export const postFoodReview = (payload: FoodReviewPayload) =>
   api.post('/api/review/food', payload)
 
 export const putFoodReview = (body: FoodReviewPayload) =>
-  api.put('/api/review/food', body)
+  api.put(`/api/review/food/${body.menuId}`, body)
 
 // 로그아웃
 export const logout = () =>
