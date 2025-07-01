@@ -83,18 +83,16 @@ export default function MenuRegisterForm({
     }
 
     try {
-      await Promise.all(
-        payload.map((p) => api.post("/menus", { date: formattedDate, ...p }))
-      )
+      await api.post(`/api/menu/${formattedDate}`, payload)
 
       alert("메뉴 등록 성공")
 
       if (onSuccess) {
-        const res = await api.get(`/menus/date/${formattedDate}`)
+        const res = await api.get(`api/menu/${formattedDate}`)
         onSuccess(res.data)
       }
-    } catch (err) {
-      console.error(err)
+    } catch (err: any) {
+      console.error("메뉴 등록 중 오류 발생", err.response?.data || err.message)
       alert("메뉴 등록 중 오류 발생")
     }
   }

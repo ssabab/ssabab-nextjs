@@ -91,7 +91,7 @@ export const postFoodReview = (payload: FoodReviewPayload) =>
   api.post('/api/review/food', payload)
 
 export const putFoodReview = (body: FoodReviewPayload) =>
-  api.put('/api/review/food', body)
+  api.put(`/api/review/food/${body.menuId}`, body)
 
 // 로그아웃
 export const logout = () =>
@@ -186,44 +186,61 @@ export const deleteMenu = (id: number) =>
   api.delete<void>(`/api/menu/${id}`)
 
 export interface PersonalAnalysisResponse {
-  ratingData: RatingDataDTO;
-  topRatedFoods: TopLowestRatedFoodsDTO[];
-  lowestRatedFoods: TopLowestRatedFoodsDTO[];
-  preferredCategories: PreferredCategoryDTO[];
-  preferredKeywordsForCloud: PreferredKeywordDTO[];
-  personalInsight: string;
-  comparisonData: ComparisonDataDTO;
+  dm_user_summary: DmUserSummary
+  dm_user_food_rating_rank_best: DmUserFoodRatingRank[]
+  dm_user_food_rating_rank_worst: DmUserFoodRatingRank[]
+  dm_user_category_stats: DmUserCategoryStat[]
+  dm_user_tag_stats: DmUserTagStat[]
+  dm_user_review_word: DmUserReviewWord[]
+  dm_user_insight: DmUserInsight
+  dm_user_group_comparison: DmUserGroupComparison
 }
 
-export interface RatingDataDTO {
-  averageRating: number;
-  totalReviews: number;
+export interface DmUserSummary {
+  userId: number
+  avgScore: number
+  totalReviews: number
+  preVoteCount: number
 }
 
-export interface TopLowestRatedFoodsDTO {
-  name: string;
-  rating: number;
-  date: string;
+export interface DmUserFoodRatingRank {
+  userId: number
+  foodName: string
+  foodScore: number
+  rankOrder: number
+  scoreType: string
 }
 
-export interface PreferredCategoryDTO {
-  name: string;
-  percentage: number;
+export interface DmUserCategoryStat {
+  userId: number
+  category: string
+  count: number
 }
 
-export interface PreferredKeywordDTO {
-  value: string;
-  count: number;
-  color: string;
+export interface DmUserTagStat {
+  userId: number
+  tag: string
+  count: number
 }
 
-export interface ComparisonDataDTO {
-  myRating: number;
-  avgRatingCommunity: number;
-  mySpicyPreference: number;
-  avgSpicyCommunity: number;
-  myVarietySeeking: number;
-  avgVarietyCommunity: number;
+export interface DmUserReviewWord {
+  userId: number
+  word: string
+  count: number
+}
+
+export interface DmUserInsight {
+  userId: number
+  insight: string | null
+}
+
+export interface DmUserGroupComparison {
+  userId: number
+  groupType: string
+  userAvgScore: number
+  userDiversityScore: number
+  groupAvgScore: number
+  groupDiversityScore: number
 }
 
 export default api
