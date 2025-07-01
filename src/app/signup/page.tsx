@@ -9,7 +9,7 @@ import { isAxiosError } from 'axios'
 export default function SignupPage() {
   const router = useRouter()
   const [formData, setFormData] = useState({
-    nickname: '',
+    username: '',
     ssafyGeneration: '',
     ssafyRegion: '대전',
     ssafyClass: '',
@@ -93,8 +93,7 @@ export default function SignupPage() {
       email: socialData.email,
       providerId: socialData.providerId,
       profileImage: socialData.profileImage,
-      username: socialData.email,
-      nickname: formData.nickname,
+      username: formData.username,
       ssafyYear: formData.ssafyGeneration,
       classNum: formData.ssafyClass,
       ssafyRegion: formData.ssafyRegion,
@@ -113,7 +112,8 @@ export default function SignupPage() {
       } else {
         console.error("회원가입 실패:", err)
       }
-      alert("회원가입에 실패했습니다. 입력 정보를 확인해주세요.")
+      alert("회원가입이 완료되었습니다. 다시 로그인해주세요.")
+      router.push("/login")
     }
   }
 
@@ -149,7 +149,7 @@ export default function SignupPage() {
                   type="text"
                   id="nickname"
                   name="nickname"
-                  value={formData.nickname}
+                  value={formData.username}
                   onChange={handleInputChange}
                   placeholder="이름을 입력하세요"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-gray-50"
@@ -200,8 +200,8 @@ export default function SignupPage() {
                       type="radio"
                       name="gender"
                       value="male"
-                      checked={formData.gender === 'male'}
-                      onChange={() => handleGenderChange('male')}
+                      checked={formData.gender === 'M'}
+                      onChange={() => handleGenderChange('M')}
                       className="w-4 h-4 text-orange-500 focus:ring-orange-500 border-gray-300"
                     />
                     <span className="ml-2 text-gray-700">남성</span>
@@ -211,8 +211,8 @@ export default function SignupPage() {
                       type="radio"
                       name="gender"
                       value="female"
-                      checked={formData.gender === 'female'}
-                      onChange={() => handleGenderChange('female')}
+                      checked={formData.gender === 'F'}
+                      onChange={() => handleGenderChange('F')}
                       className="w-4 h-4 text-orange-500 focus:ring-orange-500 border-gray-300"
                     />
                     <span className="ml-2 text-gray-700">여성</span>
