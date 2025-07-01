@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import axios from "axios"
+import api from "@/lib/api"
 
 import CalendarSelector from "@/components/admin/CalendarSelector"
 import MenuRegisterForm from "@/components/admin/MenuRegisterForm"
@@ -32,9 +32,7 @@ export default function AdminPage() {
       }
 
       try {
-        const response = await axios.get("/admin", {
-          headers: { Authorization: `Bearer ${latestToken}` },
-        })
+        const response = await api.get("/admin")
 
         if (response.data.accessLevel !== "admin") {
           alert("관리자 권한이 없습니다.")
