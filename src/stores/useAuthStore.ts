@@ -1,14 +1,13 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
 import { jwtDecode } from 'jwt-decode'   // npm install jwt-decode
-import { refreshAccessToken } from '@/lib/api'
+import api, { refreshAccessToken } from '@/lib/api'
 
 
 // ──────────── Types ─────────────────────────────────────────────────
 
 interface User {
-  name: string
-  email: string
+  username: string
 }
 
 interface AuthStoreState {
@@ -26,7 +25,9 @@ interface AuthStoreState {
   clearRefreshToken: () => void
   setUser: (user: User | null) => void
   setLoading: (loading: boolean) => void
-  login: (token: string, user?: User) => void
+  login: (username: string, password: string) => Promise<void>
+  signup: (username: string, password: string, nickname: string) => Promise<void>
+  handleSocialLogin: (accessToken: string, refreshToken: string) => void
   logout: () => void
   initializeAuth: () => void
   checkAuthStatus: () => boolean
@@ -91,58 +92,110 @@ export const useAuthStore = create<AuthStoreState>()(
 
       setLoading: (loading) => set({ isLoading: loading }),
 
-      login: (token, user) => {
-        set({ 
-          token,
-          user,
-          isAuthenticated: true,
-          isLoading: false
-        });
-        setCookie('accessToken', token)
+      login: async (username, password) => {
+        set({ isLoading: true })
+        try {
+          const response = await api.post('/account/login', { username, password })
+          const { accessToken, refreshToken, user } = response.data
+          set({
+            token: accessToken,
+            refreshToken,
+            user,
+            isAuthenticated: true,
+            isLoading: false,
+          })
+          setCookie('accessToken', accessToken)
+          setCookie('refreshToken', refreshToken, 60 * 24 * 7) // 7 days
+        } catch (error) {
+          set({ isLoading: false })
+          console.error("Login failed:", error)
+          throw error
+        }
+      },
+
+      signup: async (username, password, nickname) => {
+        set({ isLoading: true });
+        try {
+          await api.post('/account/signup', { username, password, nickname });
+          set({ isLoading: false });
+        } catch (error) {
+          set({ isLoading: false });
+          console.error("Signup failed:", error);
+          throw error;
+        }
+      },
+
+      handleSocialLogin: (accessToken, refreshToken) => {
+        try {
+          const decoded = jwtDecode<{ sub: string; exp: number }>(accessToken)
+          set({
+            token: accessToken,
+            refreshToken,
+            user: { username: decoded.sub },
+            isAuthenticated: true,
+          })
+          setCookie('accessToken', accessToken)
+          setCookie('refreshToken', refreshToken, 60 * 24 * 7) // 7 days
+        } catch (error) {
+          console.error('Social login token handling error:', error)
+          get().logout()
+        }
       },
 
       logout: () => {
-        // 쿠키 삭제, 상태 false로
-        document.cookie = "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
-        document.cookie = "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
-        set({ isAuthenticated: false })
+        removeCookie('accessToken')
+        removeCookie('refreshToken')
+        set({
+          token: null,
+          refreshToken: null,
+          user: null,
+          isAuthenticated: false,
+        })
       },
 
       clearAuth: () => {
         get().logout()
       },
 
-      initialize: async () => {
-        try {
-          await refreshAccessToken() // 토큰 리프레시
-          set({ isAuthenticated: true })
-        } catch {
-          set({ isAuthenticated: false })
-        }
-      },
-
       initializeAuth: () => {
+        if (get().isAuthInitialized) return;
+
         const token = getCookieValue('accessToken')
+        const refreshToken = getCookieValue('refreshToken')
+
         if (token) {
           try {
-            const { exp } = jwtDecode<{ exp: number }>(token)
-            if (Date.now() < exp * 1000) {
-              set({ 
+            const decoded = jwtDecode<{ sub: string; exp: number }>(token)
+            if (Date.now() < decoded.exp * 1000) {
+              set({
                 token,
+                refreshToken,
+                user: { username: decoded.sub },
                 isAuthenticated: true,
-                isAuthInitialized: true
+                isAuthInitialized: true,
               })
-              return
+            } else {
+              // Token expired, try refreshing
+              refreshAccessToken()
+                .then(newToken => {
+                  const newDecoded = jwtDecode<{ sub: string; exp: number }>(newToken.accessToken)
+                  set({
+                    token: newToken.accessToken,
+                    refreshToken: newToken.refreshToken,
+                    user: { username: newDecoded.sub },
+                    isAuthenticated: true,
+                  })
+                })
+                .catch(() => get().logout())
+                .finally(() => set({ isAuthInitialized: true }))
             }
           } catch (error) {
-            console.error('Token decoding error:', error)
+            console.error('Token handling error:', error)
+            get().logout()
           }
+        } else {
+          set({ isAuthInitialized: true })
         }
-        set({ 
-          token: null,
-          isAuthenticated: false,
-          isAuthInitialized: true
-        })
       },
 
       checkAuthStatus: () => {

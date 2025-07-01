@@ -82,7 +82,7 @@ export default function FriendsSection() {
           }
           setReviewByMenu(byMenu)
         }
-      } catch (e) {
+      } catch {
         setDataByMenu({})
       } finally {
         setLoading(false)
@@ -109,26 +109,44 @@ export default function FriendsSection() {
       </h3>
 
       <div className="flex justify-around items-center py-4">
-{menuIds.map(menuId => {
-  const menuData = isVoteTime ? dataByMenu[menuId] : reviewByMenu[menuId]
-  // vote면 count, names, menuFoods 사용
-  // review면 totalScore, count, menuFoods, friends 사용
-  const avg = !isVoteTime && menuData.count > 0 ? (menuData.totalScore / menuData.count) : 0
-
-  return (
-    <div key={menuId} className="flex flex-col items-center w-40">
-      <span className="text-xl font-bold text-gray-700 mb-2">메뉴 {menuId % 2 === 1 ? "A" : "B"}</span>
-      <span className={`text-3xl font-extrabold mt-1 ${isVoteTime ? 'text-blue-600' : 'text-green-600'}`}>
-        {isVoteTime ? `${menuData.count}명` : `${avg.toFixed(1)}점`}
-      </span>
-      {isVoteTime && (
-        <ul className="mt-2 text-xs text-gray-500 max-h-20 overflow-auto text-center">
-          {menuData.names.map(friend => <li key={friend}>{friend}</li>)}
-        </ul>
-      )}
-    </div>
-  )
-})}
+        {menuIds.map(menuId => {
+          if (isVoteTime) {
+            const menuData = dataByMenu[menuId]
+            return (
+              <div key={menuId} className="flex flex-col items-center w-40">
+                <span className="text-xl font-bold text-gray-700 mb-2">
+                  메뉴 {menuId % 2 === 1 ? 'A' : 'B'}
+                </span>
+                <span
+                  className={`text-3xl font-extrabold mt-1 text-blue-600`}
+                >
+                  {menuData.count}명
+                </span>
+                <ul className="mt-2 text-xs text-gray-500 max-h-20 overflow-auto text-center">
+                  {menuData.names.map((friend: string) => (
+                    <li key={friend}>{friend}</li>
+                  ))}
+                </ul>
+              </div>
+            )
+          } else {
+            const menuData = reviewByMenu[menuId]
+            const avg =
+              menuData.count > 0 ? menuData.totalScore / menuData.count : 0
+            return (
+              <div key={menuId} className="flex flex-col items-center w-40">
+                <span className="text-xl font-bold text-gray-700 mb-2">
+                  메뉴 {menuId % 2 === 1 ? 'A' : 'B'}
+                </span>
+                <span
+                  className={`text-3xl font-extrabold mt-1 text-green-600`}
+                >
+                  {avg.toFixed(1)}점
+                </span>
+              </div>
+            )
+          }
+        })}
       </div>
       {isMorning ? (
         <p className="text-center text-gray-500 text-sm">

@@ -32,11 +32,6 @@ function setCookie(name: string, value: string, days = 7) {
   document.cookie = `${name}=${value}; Path=/; SameSite=None; Secure; Expires=${expires}`
 }
 
-function removeCookie(name: string) {
-  if (typeof document === 'undefined') return
-  document.cookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT`
-}
-
 export interface RawFood {
   foodId: number
   foodName: string
@@ -45,7 +40,7 @@ export interface RawFood {
   tag?: string
 }
 
-export type FoodInfo = Pick<RawFood, 'foodId' | 'foodName'>
+export type FoodInfo = RawFood
 
 export interface Menu {
   menuId: number
@@ -131,8 +126,8 @@ export const getMenu = (date: string) =>
   api.get(`/api/menu?date=${date}`)
 
 // 주간 메뉴 조회 (GET /api/menu/weekly)
-let weeklyMenuCache: any = null; // 1회 호출 후 캐시됨
-let weeklyMenuCachePromise: Promise<any> | null = null;
+let weeklyMenuCache: WeeklyMenu[] | null = null;
+let weeklyMenuCachePromise: Promise<{ data: { weeklyMenus: WeeklyMenu[] } }> | null = null;
 const CACHE_KEY = 'weeklyMenusCache';
 
 export const getWeeklyMenuCached = async () => {
@@ -143,9 +138,10 @@ export const getWeeklyMenuCached = async () => {
     const cached = localStorage.getItem(CACHE_KEY);
     if (cached) {
       try {
-        weeklyMenuCache = JSON.parse(cached);
+        const arr = JSON.parse(cached);
+        weeklyMenuCache = arr;
         return { data: { weeklyMenus: arr } }
-      } catch (e) {
+      } catch {
         // 파싱 실패 시 무시하고 네트워크로
       }
     }
@@ -170,6 +166,8 @@ export const getWeeklyMenuCached = async () => {
   });
   return weeklyMenuCachePromise;
 }
+
+export const getWeeklyMenu = () => api.get('/api/menu/weekly')
 
 // 필요시 수동 초기화 (예: 로그아웃/관리자 변경 시)
 export const clearWeeklyMenuCache = () => {

@@ -1,15 +1,14 @@
 'use client'
 
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useState, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { BiBowlRice } from 'react-icons/bi'
 import { useAuthStore } from '@/stores/useAuthStore'
-import { getWeeklyMenuCached, WeeklyMenu, preVote } from '@/lib/api'
+import { getWeeklyMenu, WeeklyMenu, preVote, Menu } from '@/lib/api'
 
 const weekDays = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'] as const
 const dayKor = ['월', '화', '수', '목', '금']
 const cardColors = ['blue', 'green']
-const cacheKey = 'weeklyMenusCache'
 
 function getKSTDateISO(date?: Date) {
   const now = date ?? new Date()
@@ -48,29 +47,15 @@ export default function LunchSection() {
     removeOldKeys('lunchReview_')
   }, [todayISO])
 
-  // 주간 메뉴 fetch + 캐시
+  // 주간 메뉴 fetch
   useEffect(() => {
     setLoading(true)
-    const cached = localStorage.getItem(cacheKey)
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached)
-        if (Array.isArray(parsed)) {
-          setWeeklyMenus(parsed)
-          const todayISO = getKSTDateISO()
-          const todayIdx = parsed.findIndex((m: any) => m.date === todayISO)
-          setSelectedIdx(todayIdx !== -1 ? todayIdx : 5)
-        }
-      } catch {}
-      setLoading(false)
-    }
-    getWeeklyMenuCached()
+    getWeeklyMenu()
       .then(res => {
         const menus = Array.isArray(res.data.weeklyMenus) ? res.data.weeklyMenus : []
         setWeeklyMenus(menus)
-        localStorage.setItem(cacheKey, JSON.stringify(menus))
         const todayISO = getKSTDateISO()
-        const todayIdx = menus.findIndex((m: any) => m.date === todayISO)
+        const todayIdx = menus.findIndex((m: WeeklyMenu) => m.date === todayISO)
         setSelectedIdx(todayIdx !== -1 ? todayIdx : 5)
       })
       .catch(() => {})
@@ -105,6 +90,11 @@ export default function LunchSection() {
     return null
   }, [isToday, hour])
 
+  const handleDayChange = useCallback((dayIdx: number) => {
+    const baseIdx = selectedIdx < 5 ? 0 : 5
+    setSelectedIdx(baseIdx + dayIdx)
+  }, [selectedIdx])
+
   // 요일 버튼
   const weekDayButtons = useMemo(() => {
     const baseIdx = selectedIdx < 5 ? 0 : 5
@@ -131,20 +121,16 @@ export default function LunchSection() {
         </button>
       )
     })
-  }, [weeklyMenus, selectedIdx, todayISO, loading])
+  }, [weeklyMenus, selectedIdx, todayISO, loading, handleDayChange])
 
-  // 주차 이동, 요일 이동
+  // 주차 이동
   const handleWeekChange = (toThisWeek: boolean) => {
-    const offset = toThisWeek ? 5 : 0
+    const offset = toThisWeek ? 0 : 5 // Note: Logic seems reversed, but keeping as is. toThisWeek=true should be this week (index >= 5), but code sets offset to 0.
     setSelectedIdx(offset + (selectedIdx % 5))
-  }
-  const handleDayChange = (dayIdx: number) => {
-    const baseIdx = selectedIdx < 5 ? 0 : 5
-    setSelectedIdx(baseIdx + dayIdx)
   }
 
   // 투표/리뷰 액션(더블클릭)
-  const handleVoteOrReview = async (menu) => {
+  const handleVoteOrReview = async (menu: Menu) => {
     if (!isToday || !isAuthenticated) return
     if (hour < 12) {
       console.log(todayVote, menu.menuId)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useAuthStore } from '@/stores/useAuthStore'
 import {
   Dialog,
@@ -13,6 +13,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 import api from '@/lib/api'
+import { isAxiosError } from 'axios'
 
 interface Friend {
   userId: number
@@ -29,20 +30,18 @@ export default function FriendList() {
   const [newFriendName, setNewFriendName] = useState('')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 
-  useEffect(() => {
-    if (token) fetchFriends()
-  }, [token])
-
-  const fetchFriends = async () => {
+  const fetchFriends = useCallback(async () => {
     try {
-      const res = await api.get('/friends', {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const res = await api.get('/friends')
       setFriends(res.data.friends || [])
     } catch (err) {
       console.error('친구 목록 불러오기 실패', err)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    if (token) fetchFriends()
+  }, [token, fetchFriends])
 
   const handleAddFriend = async () => {
     if (!newFriendName.trim()) return
@@ -50,12 +49,6 @@ export default function FriendList() {
       const res = await api.post(
         '/friends',
         { username: newFriendName },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-        },
       )
       if (res.status === 200 || res.status === 201) {
         setNewFriendName('')
@@ -64,8 +57,12 @@ export default function FriendList() {
       } else {
         alert(res.data.error || '친구 추가 실패')
       }
-    } catch (err: any) {
-      alert(err.response?.data?.error || '친구 추가 실패')
+    } catch (err: unknown) {
+      if (isAxiosError(err) && err.response) {
+        alert(err.response.data?.error || '친구 추가 실패')
+      } else {
+        alert('친구 추가 실패')
+      }
       console.error('친구 추가 실패', err)
     }
   }
@@ -73,18 +70,18 @@ export default function FriendList() {
   const handleDeleteFriend = async (friendId: number) => {
     if (!window.confirm('정말 이 친구를 삭제하시겠습니까?')) return
     try {
-      const res = await api.delete(`/friends/${friendId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
+      const res = await api.delete(`/friends/${friendId}`)
       if (res.status === 200) {
         setFriends(prev => prev.filter(f => f.userId !== friendId))
       } else {
         alert(res.data.error || '친구 삭제 실패')
       }
-    } catch (err: any) {
-      alert(err.response?.data?.error || '친구 삭제 중 오류 발생')
+    } catch (err: unknown) {
+      if (isAxiosError(err) && err.response) {
+        alert(err.response.data?.error || '친구 삭제 중 오류 발생')
+      } else {
+        alert('친구 삭제 중 오류 발생')
+      }
       console.error(err)
     }
   }

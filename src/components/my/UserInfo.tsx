@@ -3,8 +3,9 @@
 import { useAuthStore } from '@/stores/useAuthStore'
 import { Button } from '@/components/ui/button'
 import { Settings } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import {
   Dialog,
   DialogTrigger,
@@ -14,8 +15,9 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import api from '@/lib/api'
+import { isAxiosError } from 'axios'
 
-interface UserInfo {
+interface UserInfoData {
   username: string
   ssafyRegion: string
   ssafyYear: string
@@ -24,30 +26,27 @@ interface UserInfo {
 }
 
 export default function UserInfo() {
-  const { token, logout } = useAuthStore()
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(null)
+  const { logout } = useAuthStore()
+  const [userInfo, setUserInfo] = useState<UserInfoData | null>(null)
   const [editUsername, setEditUsername] = useState('')
   const [editClassNum, setEditClassNum] = useState('')
   const [isOpen, setIsOpen] = useState(false)
   const router = useRouter()
 
-  const fetchUserInfo = async () => {
-    if (!token) return
+  const fetchUserInfo = useCallback(async () => {
     try {
-      const res = await api.get('/account/info', {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const res = await api.get<UserInfoData>('/account/info')
       setUserInfo(res.data)
       setEditUsername(res.data.username)
       setEditClassNum(res.data.classNum)
     } catch (err) {
       console.error('유저 정보 조회 실패', err)
     }
-  }
+  }, [])
 
   useEffect(() => {
     fetchUserInfo()
-  }, [token])
+  }, [fetchUserInfo])
 
   const handleLogout = () => {
     logout()
@@ -56,19 +55,10 @@ export default function UserInfo() {
 
   const handleUpdate = async () => {
     try {
-      const res = await api.put(
-        '/account/update',
-        {
-          username: editUsername,
-          classNum: editClassNum,
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      )
+      const res = await api.put('/account/update', {
+        username: editUsername,
+        classNum: editClassNum,
+      })
 
       if (res.status === 200) {
         setIsOpen(false)
@@ -76,8 +66,12 @@ export default function UserInfo() {
       } else {
         alert(res.data.message || '수정 실패')
       }
-    } catch (err: any) {
-      alert(err.response?.data?.message || '수정 중 오류 발생')
+    } catch (err: unknown) {
+      if (isAxiosError(err) && err.response) {
+        alert(err.response.data?.message || '수정 중 오류 발생')
+      } else {
+        alert('수정 중 오류가 발생했습니다.')
+      }
     }
   }
 
@@ -86,9 +80,11 @@ export default function UserInfo() {
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-3">
           {userInfo?.profileImageUrl ? (
-            <img
+            <Image
               src={userInfo.profileImageUrl}
               alt="프로필 이미지"
+              width={40}
+              height={40}
               className="w-10 h-10 rounded-full object-cover"
             />
           ) : (
@@ -96,7 +92,8 @@ export default function UserInfo() {
           )}
           <div>
             <div className="text-sm text-gray-400">
-              {userInfo?.ssafyYear}기 {userInfo?.ssafyRegion} {userInfo?.classNum}반
+              {userInfo?.ssafyYear}기 {userInfo?.ssafyRegion}{' '}
+              {userInfo?.classNum}반
             </div>
             <div className="text-xl font-semibold">{userInfo?.username}</div>
           </div>
@@ -115,7 +112,9 @@ export default function UserInfo() {
 
             <div className="space-y-4 pt-2">
               <div>
-                <label className="block text-sm text-gray-500 mb-1">유저명</label>
+                <label className="block text-sm text-gray-500 mb-1">
+                  유저명
+                </label>
                 <input
                   value={editUsername}
                   onChange={(e) => setEditUsername(e.target.value)}
@@ -134,10 +133,7 @@ export default function UserInfo() {
             </div>
 
             <DialogFooter className="pt-4">
-              <Button
-                variant="outline"
-                onClick={() => setIsOpen(false)}
-              >
+              <Button variant="outline" onClick={() => setIsOpen(false)}>
                 취소
               </Button>
               <Button
