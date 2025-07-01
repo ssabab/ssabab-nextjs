@@ -23,7 +23,7 @@ interface StarRatingRowProps {
   foodId: number
   foodName: string
   rating: number
-  onStarClick: (foodId: number, score: number) => void
+  onStarClick: (foodId: number, foodScore: number) => void
 }
 const StarRatingRow = React.memo(function StarRatingRow({ foodId, foodName, rating, onStarClick }: StarRatingRowProps) {
   const stars = useMemo(() => [1, 2, 3, 4, 5], [])
@@ -167,7 +167,7 @@ export default function ReviewPage() {
     if (!menuData || !menuData.foods) return []
     return menuData.foods.map((food: any) => ({
       foodId: food.foodId,
-      score: itemRatings[food.foodId] || 0,
+      foodScore: itemRatings[food.foodId] || 0,
     }))
   }
 const executeSubmission = async () => {
