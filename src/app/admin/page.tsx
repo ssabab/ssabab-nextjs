@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import api from "@/lib/api"
+import api, { Menu } from "@/lib/api"
 
 import CalendarSelector from "@/components/admin/CalendarSelector"
 import MenuRegisterForm from "@/components/admin/MenuRegisterForm"
@@ -11,11 +11,10 @@ import { useAuthStore } from "@/stores/useAuthStore"
 
 export default function AdminPage() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
-  const [menus, setMenus] = useState<any[]>([])
+  const [menus, setMenus] = useState<Menu[]>([])
   const [checking, setChecking] = useState(true)
 
   const router = useRouter()
-  const token = useAuthStore((s) => s.token)
   const initializeAuth = useAuthStore((s) => s.initializeAuth)
 
   useEffect(() => {
@@ -50,7 +49,7 @@ export default function AdminPage() {
     verifyAccess()
   }, [router, initializeAuth])
 
-  const handleMenuCheckResult = (date: string, menus: any[]) => {
+  const handleMenuCheckResult = (date: string, menus: Menu[]) => {
     setSelectedDate(date)
     setMenus(menus)
   }
@@ -62,7 +61,7 @@ export default function AdminPage() {
 
   const shouldRenderRegister =
     selectedDate !== null &&
-    (menus.length === 0 || menus.every((menu) => !menu.foods || menu.foods.length === 0))
+    (menus.length === 0 || menus.every((menu) => !menu.foods || !menu.foods.length))
 
   if (checking) return <div className="p-8">접근 권한 확인 중...</div>
 
@@ -85,7 +84,7 @@ export default function AdminPage() {
           {shouldRenderRegister && (
             <MenuRegisterForm
               date={selectedDate!}
-              onSuccess={(newMenus) => setMenus(newMenus)}
+              onSuccess={(newMenus: Menu[]) => setMenus(newMenus)}
             />
           )}
         </div>

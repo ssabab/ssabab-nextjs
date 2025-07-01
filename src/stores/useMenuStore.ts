@@ -28,7 +28,7 @@ export const useMenuStore = create<MenuStoreState>()(
         try {
           const res = await getWeeklyMenuCached();
           set({ weeklyMenus: res.data.weeklyMenus, loading: false });
-        } catch (e) {
+        } catch {
           set({ loading: false });
         }
       },

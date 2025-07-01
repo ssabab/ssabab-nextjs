@@ -11,7 +11,7 @@ import SectionTitle from '@/components/common/SectionTitle'
 
 export default function SsababPage() {
   const router = useRouter()
-  const { login, initializeAuth } = useAuthStore()
+  const { handleSocialLogin, initializeAuth } = useAuthStore()
 
   useEffect(() => {
     // 페이지 로드 시 인증 상태 초기화
@@ -19,13 +19,14 @@ export default function SsababPage() {
 
     const params = new URLSearchParams(window.location.search);
     const accessToken = params.get('accessToken');
+    const refreshToken = params.get('refreshToken');
 
-    if (accessToken) {
+    if (accessToken && refreshToken) {
       // useAuthStore를 사용해서 로그인 처리
-      login(accessToken);
+      handleSocialLogin(accessToken, refreshToken);
       router.replace('/ssabab');
     }
-  }, [router, login, initializeAuth]);
+  }, [router, handleSocialLogin, initializeAuth]);
 
   return (
     <main className="flex-1 pb-24 pt-6 bg-gray-50">

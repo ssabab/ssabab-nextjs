@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import axios from "axios"
-import { useAuthStore } from "@/stores/useAuthStore"
+import { format } from "date-fns"
+import api, { Menu } from "@/lib/api"
 
 const MAIN_SUB_OPTIONS = ["주메뉴", "서브메뉴", "일반메뉴"]
 const CATEGORY_OPTIONS = ["한식", "중식", "일식", "양식"]
@@ -30,18 +30,19 @@ const createInitialMenu = (): MenuInput => ({
   foods: Array.from({ length: 6 }, createInitialFood),
 })
 
+interface MenuRegisterFormProps {
+  date: string
+  onSuccess?: (menus: Menu[]) => void
+}
+
 export default function MenuRegisterForm({
   date,
   onSuccess,
-}: {
-  date: string | Date
-  onSuccess?: (menus: any[]) => void
-}) {
+}: MenuRegisterFormProps) {
   const [menus, setMenus] = useState<MenuInput[]>([
     createInitialMenu(),
     createInitialMenu(),
   ])
-  const token = useAuthStore((state) => state.token)
 
   useEffect(() => {
     setMenus([createInitialMenu(), createInitialMenu()])
@@ -68,34 +69,29 @@ export default function MenuRegisterForm({
   }
 
   const handleRegister = async () => {
-    if (!token) {
-      alert("로그인이 필요합니다.")
+    const formattedDate = format(new Date(date), "yyyy-MM-dd")
+
+    const payload = menus
+      .map((menu) => ({
+        foods: menu.foods.filter((food) => food.foodName.trim() !== ""),
+      }))
+      .filter((menu) => menu.foods.length > 0)
+
+    if (payload.length === 0) {
+      alert("등록할 메뉴가 없습니다.")
       return
     }
 
-    const formattedDate =
-      typeof date === "string" ? date : date.toISOString().slice(0, 10)
-
     try {
-      const res = await axios.post(
-        `/api/menu/${formattedDate}`,
-        menus,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
+      await Promise.all(
+        payload.map((p) => api.post("/menus", { date: formattedDate, ...p }))
       )
 
-      if (res.status === 201) {
-        alert("메뉴 등록 성공")
+      alert("메뉴 등록 성공")
 
-        // 등록 후 새로 데이터 불러와서 상위로 전달
-        const menusRes = await axios.get(
-          `/api/menu?date=${formattedDate}`
-        )
-        if (onSuccess) onSuccess(menusRes.data)
+      if (onSuccess) {
+        const res = await api.get(`/menus/date/${formattedDate}`)
+        onSuccess(res.data)
       }
     } catch (err) {
       console.error(err)
@@ -105,7 +101,7 @@ export default function MenuRegisterForm({
 
   return (
     <div className="border p-4 rounded-md space-y-6">
-      <h2 className="text-lg font-semibold">{typeof date === "string" ? date : date.toLocaleDateString()} 메뉴 등록</h2>
+      <h2 className="text-lg font-semibold">{date} 메뉴 등록</h2>
       {menus.map((menu, menuIdx) => (
         <div key={menuIdx} className="space-y-2">
           <h3 className="font-medium">메뉴 {menuIdx + 1}</h3>

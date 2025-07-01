@@ -2,9 +2,10 @@
 
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { getMenu, postMenuReview, putMenuReview, postFoodReview, putFoodReview, refreshAccessToken } from '@/lib/api'
+import { getMenu, postMenuReview, putMenuReview, postFoodReview, putFoodReview, refreshAccessToken, Menu, FoodInfo } from '@/lib/api'
 import Confetti from 'react-confetti'
 import { FaStar, FaArrowLeft, FaRegSmileBeam, FaRegFrownOpen } from 'react-icons/fa'
+import { isAxiosError } from 'axios'
 
 const HOME = '/ssabab'
 
@@ -57,9 +58,7 @@ export default function ReviewPage() {
   // ------ 모든 Hook은 여기 선언 ------
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [ready, setReady] = useState(false)
-  const [menuData, setMenuData] = useState<any>(null)
-  const [isAllowedTime, setIsAllowedTime] = useState(false)
-  const [isTodayMenu, setIsTodayMenu] = useState(false)
+  const [menuData, setMenuData] = useState<Menu | null>(null)
   const [itemRatings, setItemRatings] = useState<Record<number, number>>({})
   const [isSatisfied, setIsSatisfied] = useState<boolean | null>(null)
   const [oneLineReview, setOneLineReview] = useState('')
@@ -89,8 +88,7 @@ export default function ReviewPage() {
         router.push('/login')
       })
     }
-    setIsAllowedTime(hour >= 12 && hour < 23)
-  }, [router, hour])
+  }, [router])
 
   // 2. 메뉴 데이터 가져오기 (menuId로 menu1/menu2 중 하나 찾음)
   useEffect(() => {
@@ -103,7 +101,6 @@ export default function ReviewPage() {
     const localMenu = localStorage.getItem(localKey)
     if (localMenu) {
       setMenuData(JSON.parse(localMenu))
-      setIsTodayMenu(reviewDate === todayISO)
       return
     }
     
@@ -111,19 +108,18 @@ export default function ReviewPage() {
       .then(res => {
         // response: { menu1: {...}, menu2: {...} }
         const menus = [res.data.menu1, res.data.menu2].filter(Boolean)
-        const found = menus.find((m: any) => Number(m.menuId) === menuId)
+        const found = menus.find((m: Menu) => Number(m.menuId) === menuId)
         if (!found) {
           alert('해당 날짜의 메뉴가 없습니다.')
           router.push(HOME)
           return
         }
         setMenuData(found)
-        setIsTodayMenu(reviewDate === todayISO)
       })
       .catch(() => {
         router.push(HOME)
       })
-  }, [reviewDate, menuId, router, todayISO])
+  }, [reviewDate, menuId, router])
 
   // 3. 창 사이즈 감지 (Confetti용)
   useEffect(() => {
@@ -142,7 +138,7 @@ export default function ReviewPage() {
   const handleSubmitReview = () => {
     if (isSatisfied === null) return alert('만족도를 선택해주세요')
     const allFoods = menuData?.foods || []
-    const anyZeroRating = allFoods.some((food: any) => !itemRatings[food.foodId] || itemRatings[food.foodId] === 0)
+    const anyZeroRating = allFoods.some((food: FoodInfo) => !itemRatings[food.foodId] || itemRatings[food.foodId] === 0)
     setConfirmMsg(
       anyZeroRating
         ? '별점이 0점인 음식이 있습니다. 제출하시겠습니까?'
@@ -152,7 +148,7 @@ export default function ReviewPage() {
   }
 
   const starRows = useMemo(() => {
-    return menuData?.foods?.map((food: any) => (
+    return menuData?.foods?.map((food: FoodInfo) => (
       <StarRatingRow
         key={food.foodId}
         foodId={food.foodId}
@@ -165,12 +161,17 @@ export default function ReviewPage() {
 
   const makeFoodReviews = () => {
     if (!menuData || !menuData.foods) return []
-    return menuData.foods.map((food: any) => ({
+    return menuData.foods.map((food: FoodInfo) => ({
       foodId: food.foodId,
       foodScore: itemRatings[food.foodId] || 0,
     }))
   }
 const executeSubmission = async () => {
+  if (!menuData) {
+    console.error("메뉴 데이터가 없습니다. 제출을 중단합니다.");
+    setShowConfirmModal(false);
+    return;
+  }
   const reviewsArr = makeFoodReviews();
 
   const payloadFood = {
@@ -186,17 +187,22 @@ const executeSubmission = async () => {
 
   try {
     await postFoodReview(payloadFood);
-  } catch (err: any) {
-    console.error("postFoodReview 실패", err?.response?.status, err?.response?.data);
-    if (err?.response?.status === 400) {
-      try {
-        await putFoodReview(payloadFood);
-        console.log("putFoodReview 성공 (대체)");
-      } catch (putErr) {
-        console.error("putFoodReview 실패", putErr);
-        throw putErr;
+  } catch (err: unknown) {
+    if (isAxiosError(err)) {
+      console.error("postFoodReview 실패", err.response?.status, err.response?.data);
+      if (err.response?.status === 400) {
+        try {
+          await putFoodReview(payloadFood);
+          console.log("putFoodReview 성공 (대체)");
+        } catch (putErr) {
+          console.error("putFoodReview 실패", putErr);
+          throw putErr;
+        }
+      } else {
+        throw err;
       }
     } else {
+      console.error("postFoodReview 실패", err);
       throw err;
     }
   }
@@ -204,17 +210,22 @@ const executeSubmission = async () => {
   try {
     await postMenuReview(payloadMenu);
     console.log("postMenuReview 성공");
-  } catch (err: any) {
-    console.error("postMenuReview 실패", err?.response?.status, err?.response?.data);
-    if (err?.response?.status === 400) {
-      try {
-        await putMenuReview(payloadMenu);
-        console.log("putMenuReview 성공 (대체)");
-      } catch (putErr) {
-        console.error("putMenuReview 실패", putErr);
-        throw putErr;
+  } catch (err: unknown) {
+    if (isAxiosError(err)) {
+      console.error("postMenuReview 실패", err.response?.status, err.response?.data);
+      if (err.response?.status === 400) {
+        try {
+          await putMenuReview(payloadMenu);
+          console.log("putMenuReview 성공 (대체)");
+        } catch (putErr) {
+          console.error("putMenuReview 실패", putErr);
+          throw putErr;
+        }
+      } else {
+        throw err;
       }
     } else {
+      console.error("postMenuReview 실패", err);
       throw err;
     }
   }

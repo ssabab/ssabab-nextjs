@@ -1,42 +1,42 @@
 "use client"
 
 import { useState } from "react"
+import { format } from "date-fns"
+import api, { Menu } from "@/lib/api"
 import { Calendar } from "@/components/ui/calendar"
 import { ko } from "date-fns/locale"
-import axios from "axios"
+
+interface CalendarSelectorProps {
+  onMenuCheckResult: (date: string, menus: Menu[]) => void
+}
 
 export default function CalendarSelector({
   onMenuCheckResult,
-}: {
-  onMenuCheckResult: (date: string, menus: any[]) => void
-}) {
-  const [selectedDate, setSelectedDate] = useState<Date>()
+}: CalendarSelectorProps) {
+  const [date, setDate] = useState<Date | undefined>(new Date())
 
-  const handleSelect = async (date: Date | undefined) => {
-    if (!date) return
-    setSelectedDate(date)
+  const handleDateSelect = async (selectedDate: Date | undefined) => {
+    if (!selectedDate) return
 
-    const formatted = date.toLocaleDateString("sv-SE") // YYYY-MM-DD
+    setDate(selectedDate)
+    const formattedDate = format(selectedDate, "yyyy-MM-dd")
 
     try {
-      const res = await axios.get(`/api/menu?date=${formatted}`)
-      onMenuCheckResult(formatted, res.data)
-    } catch (err: any) {
-      if (err.response?.status === 400 || err.response?.status === 404) {
-        onMenuCheckResult(formatted, [])
-      } else {
-        console.error("메뉴 조회 중 오류 발생:", err)
-        alert("메뉴 정보를 불러오는 중 문제가 발생했습니다.")
-      }
+      const response = await api.get(`/menus/date/${formattedDate}`)
+      onMenuCheckResult(formattedDate, response.data)
+    } catch (error) {
+      console.error("메뉴 조회 실패:", error)
+      onMenuCheckResult(formattedDate, [])
     }
   }
 
   return (
     <Calendar
       mode="single"
-      selected={selectedDate}
-      onSelect={handleSelect}
+      selected={date}
+      onSelect={handleDateSelect}
       locale={ko}
+      className="rounded-md border"
     />
   )
 }
