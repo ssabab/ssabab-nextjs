@@ -288,7 +288,7 @@ export function PersonalAnalysis() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {dm_user_review_word.map((item, index) => (
               <div key={index} className="bg-gray-50 p-3 rounded-md flex justify-between items-center">
-                <span className="font-medium text-gray-700">'{item.word}'</span>
+                <span className="font-medium text-gray-700">&apos;{item.word}&apos;</span>
                 <span className="text-sm text-gray-500">({item.count}회)</span>
               </div>
             ))}

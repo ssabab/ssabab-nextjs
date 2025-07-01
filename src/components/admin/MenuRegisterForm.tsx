@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { format } from "date-fns"
 import api, { Menu } from "@/lib/api"
+import { isAxiosError } from "axios"
 
 const MAIN_SUB_OPTIONS = ["주메뉴", "서브메뉴", "일반메뉴"]
 const CATEGORY_OPTIONS = ["한식", "중식", "일식", "양식"]
@@ -91,8 +92,12 @@ export default function MenuRegisterForm({
         const res = await api.get(`api/menu/${formattedDate}`)
         onSuccess(res.data)
       }
-    } catch (err: any) {
-      console.error("메뉴 등록 중 오류 발생", err.response?.data || err.message)
+    } catch (err: unknown) {
+      if (isAxiosError(err)) {
+        console.error("메뉴 등록 중 오류 발생", err.response?.data || err.message)
+      } else {
+        console.error("메뉴 등록 중 오류 발생", err)
+      }
       alert("메뉴 등록 중 오류 발생")
     }
   }
