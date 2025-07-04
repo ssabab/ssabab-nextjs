@@ -22,7 +22,7 @@ export default function CalendarSelector({
     const formattedDate = format(selectedDate, "yyyy-MM-dd")
 
     try {
-      const response = await api.get(`api/menus/${formattedDate}`)
+      const response = await api.get(`/api/menu?date=${formattedDate}`)
       onMenuCheckResult(formattedDate, response.data)
     } catch (error) {
       console.error("메뉴 조회 실패:", error)

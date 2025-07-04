@@ -8,29 +8,32 @@ export function PersonalAnalysis() {
   const [data, setData] = useState<PersonalAnalysisResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loginRequired, setLoginRequired] = useState(false);
 
   useEffect(() => {
     if (!token) {
         setLoading(false);
-        setError("개인 분석을 보려면 로그인이 필요합니다.");
+        setLoginRequired(true);
         return;
     }
 
     const fetchPersonalAnalysis = async () => {
       try {
         setLoading(true);
+        setLoginRequired(false);
+        setError(null);
         const res = await api.get<PersonalAnalysisResponse>('api/analysis/personal');
         setData(res.data);
       } catch (err: unknown) {
         if (isAxiosError(err)) {
           console.error("API 요청 오류:", err.response?.data || err.message, err);
-          setError(err.response?.data?.message || err.message || '데이터를 불러오는 데 실패했습니다.');
+          setError(err.response?.data?.message || err.message || '개인화 분석 데이터를 불러오는 데 실패했습니다.');
         } else if (err instanceof Error) {
           console.error("일반 오류:", err);
           setError(err.message);
         } else {
           console.error("알 수 없는 오류:", err);
-          setError('데이터를 불러오는 데 실패했습니다.');
+          setError('개인화 분석 데이터를 불러오는 데 실패했습니다.');
         }
       } finally {
         setLoading(false);
@@ -41,8 +44,29 @@ export function PersonalAnalysis() {
   }, [token]);
 
   if (loading) return <div className="p-8 text-center">개인화 분석 데이터를 불러오는 중...</div>;
-  if (error) return <div className="p-8 text-center text-red-500">오류: {error}</div>;
-  if (!data) return <div className="p-8 text-center">분석 데이터가 없습니다.</div>;
+  
+  if (loginRequired) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 bg-white rounded-lg shadow border border-gray-200">
+        <h2 className="text-xl font-bold text-gray-800 mb-4">로그인이 필요합니다.</h2>
+        <p className="text-gray-600">개인화된 분석 데이터는 로그인 후 이용하실 수 있습니다.</p>
+        <p className="text-gray-600">로그인 페이지로 이동하여 싸밥 서비스를 경험해보세요.</p>
+      </div>
+    );
+  }
+
+  // "사용자 요약 정보를 찾을 수 없습니다." 메시지 처리 및 데이터 없음 UI 활용
+  const isNoDataError = error && (error.includes("사용자 요약 정보를 찾을 수 없습니다.") || error.includes("데이터를 불러오는 데 실패했습니다."));
+
+  if (error && !isNoDataError) return <div className="p-8 text-center text-red-500">{error}</div>; // 일반 오류 메시지
+  
+  if (!data || Object.keys(data).length === 0 || !data.dm_user_summary || data.dm_user_summary.totalReviews === 0 || isNoDataError) return (
+    <div className="flex flex-col items-center justify-center p-8 bg-white rounded-lg shadow border border-gray-200">
+      <h2 className="text-xl font-bold text-gray-800 mb-4">개인화 분석 데이터가 존재하지 않습니다.</h2>
+      <p className="text-gray-600">아직 충분한 리뷰 데이터가 없어서 분석을 제공하기 어렵습니다.</p>
+      <p className="text-gray-600">메뉴를 맛보고 솔직한 리뷰를 남겨주시면 멋진 분석을 보여드릴게요!</p>
+    </div>
+  );
   
   const {
     dm_user_summary,
