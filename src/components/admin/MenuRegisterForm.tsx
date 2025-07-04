@@ -89,12 +89,12 @@ export default function MenuRegisterForm({
       alert("메뉴 등록 성공")
 
       if (onSuccess) {
-        const res = await api.get(`api/menu/${formattedDate}`)
+        const res = await api.get(`/api/menu?date=${formattedDate}`)
         onSuccess(res.data)
       }
     } catch (err: unknown) {
       if (isAxiosError(err)) {
-        console.error("메뉴 등록 중 오류 발생", err.response?.data || err.message)
+        console.error("메뉴 등록 중 오류 발생", err.response?.data ? JSON.stringify(err.response.data) : err.message)
       } else {
         console.error("메뉴 등록 중 오류 발생", err)
       }

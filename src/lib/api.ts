@@ -95,7 +95,7 @@ export const putFoodReview = (body: FoodReviewPayload) =>
 
 // 로그아웃
 export const logout = () =>
-  api.post('/logout', null, {
+  api.post('/account/logout', null, {
     withCredentials: true,
   })
 

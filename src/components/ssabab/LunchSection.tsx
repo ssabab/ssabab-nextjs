@@ -125,8 +125,14 @@ export default function LunchSection() {
 
   // 주차 이동
   const handleWeekChange = (toThisWeek: boolean) => {
-    const offset = toThisWeek ? 0 : 5 // Note: Logic seems reversed, but keeping as is. toThisWeek=true should be this week (index >= 5), but code sets offset to 0.
-    setSelectedIdx(offset + (selectedIdx % 5))
+    // 현재 요일의 인덱스 (0-4, 월-금)를 계산합니다.
+    const currentDayOfWeekIndex = selectedIdx % 5;
+
+    if (toThisWeek) { // "이번 주" 버튼 클릭 (저번 주 -> 이번 주)
+      setSelectedIdx(currentDayOfWeekIndex + 5); // 5를 더하여 이번 주의 해당 요일로 이동
+    } else { // "저번 주" 버튼 클릭 (이번 주 -> 저번 주)
+      setSelectedIdx(currentDayOfWeekIndex); // 0-4 범위로 설정하여 저번 주의 해당 요일로 이동
+    }
   }
 
   // 투표/리뷰 액션(더블클릭)
