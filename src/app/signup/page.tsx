@@ -83,15 +83,43 @@ export default function SignupPage() {
       gender
     }))
   }
-
+  // 유저네임 중복 확인
+  const checkUsernameExists = async (username: string): Promise<boolean> => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/account/check-username?username=${username}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!response.ok) {
+        // 서버에서 에러 응답을 보낼 경우 (예: 500 에러)
+        console.error('닉네임 중복 확인 서버 오류:', response.status, await response.text());
+        alert('닉네임 중복 확인 중 서버 오류가 발생했습니다.');
+        return true; // 에러 발생 시 일단 중복으로 처리하여 회원가입을 막음
+      }
+      const exists = await response.json(); // 백엔드가 true/false를 반환한다고 가정
+      return exists;
+    } catch (error) {
+      console.error("닉네임 중복 확인 중 오류 또는 예외 발생:", error);
+      alert('오류로 닉네임 중복 확인에 실패했습니다.');
+      return true; // 네트워크 오류 시 일단 중복으로 처리하여 회원가입을 막음
+    }
+  };
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
     // 유효성 검사
     if (!formData.username.trim()) {
       alert('유저명(닉네임)을 입력해주세요.')
       return
     }
+    // 중복 검사
+    const usernameExists = await checkUsernameExists(formData.username);
+    if (usernameExists) {
+      alert('이미 사용 중인 닉네임입니다. 다른 닉네임을 사용해주세요.');
+      return;
+    }
+
     if (!formData.ssafyGeneration.trim()) {
       alert('싸피 기수를 입력해주세요.')
       return
